@@ -1,0 +1,177 @@
+%!PS
+%%Title: Zoneplate Generator
+%%Creator: David Pitcher
+%%CreationDate: July 6, 2025
+%%lastModified: July 6, 2025
+%%DocumentPaperSizes: Letter
+
+%***********************************************************************
+% Change the following numbers to suit your Zoneplate
+%***********************************************************************
+
+/F 210 def     % change number to whatever focal length in mm you want
+
+/CZ 6 def     % number of zones
+
+/M  1 def    % change number to whatever magnification you want the
+              % printed zone plate to be
+
+/SLR 50 def   % focal length in millimeters you plan to use on your SLR 
+              % to take the picture of the printed Zone Plate created by this 
+              % script. This parameter has no bearing on the printed zone plate
+              % it is asked just to suggest you the correct distance from your
+              % SLR camera to this printed Zone Plate.
+
+/ROWS 2 def   % number of rows of zone plates
+/COLS 9 def   % number of columns of zone plates per row
+
+%************************************************************************
+% DO NOT ALTER THE SCRIPT BELLOW THIS LINE
+% Central Pinhole Size - sqrt(0.0022 * Pinhole_Focal_Legnth) * Magnifaction_Factor * Extra_Mag_Factor
+%************************************************************************
+/R 1 def       % This is an extra magnification or reduction factor   
+               % I suggest you leave it alone (Others use a value of 0.97)
+
+%/inch {72 mul} def                            % converts inches to points
+/mm {2.83 mul} def                            % converts mm to points
+/pointsTOmm {72 div 25.4 mul} def             % converts points to mm
+/pi 3.1415926536 def                          % define pi
+/area 0 def                                   % initialize variable "area" to store
+                                              % the sum of areas of all zones
+/counter 0 def                                % initialize counter of clear zones
+/logsqrt2 2 sqrt log def                      % log(sqrt(2))
+
+/center 0.0022 F mul sqrt M mul R mul mm def  % size of central pinhole in points  
+
+/pagewidth 215 def  % width of the page in mm
+/pageheight 279 def % height of the page in mm
+/totalZonePlateSize 21.5 def
+/offsetx {totalZonePlateSize mul} def % offset for x-axis
+/offsety {pageheight exch totalZonePlateSize mul sub} def % offset for y-axis
+
+gsave %save current state configuration
+%******************************************************************
+
+%*****************************************************************
+% Draw 8" x 10" frame around page
+%*****************************************************************
+1 mm setlinewidth                % Set line width to 2mm
+newpath
+10 mm 269 mm moveto              % Start at (10mm, 269mm)
+pagewidth 20 sub mm 0 rlineto    % Draw to the right
+0 20 pageheight sub mm rlineto   % Draw down
+20 pagewidth sub mm 0 rlineto    % Draw left
+closepath
+stroke
+grestore
+%*****************************************************************  
+
+%*****************************************************************
+% Draw Zone Plates in Grid Pattern
+%*****************************************************************
+/drawZonePlate {
+    /rowIndex exch def
+    /colIndex exch def
+    
+    gsave
+
+    % Translate current position to correct grid position
+    colIndex offsetx mm rowIndex offsety mm translate
+    
+    % Draw Punch Outline to cut zone plate from film
+    0 setgray                                  
+    .5 mm setlinewidth                    
+    newpath                               
+    0 0 5 mm 0 360 arc 
+    stroke
+
+    % Calculate the center pinhole based on first zone size
+    center 2 div dup scale
+
+    % Draw all the outer zone plate rings
+    newpath 
+    CZ 1 sub -1 1 {                            % CZ-1 = ((# of zones odd# -1)/2)
+        2 mul dup 1 add                         % Total # of rings left to draw
+        0 setgray                               % Black ink  
+        0 exch 0 exch sqrt 0 360 arc fill       % SQRT of ring# (odd) 
+        1 setgray                               % White ink
+        0 exch 0 exch sqrt 0 360 arc fill       % SQRT of ring# (even)
+    } for 
+
+    % Draw the first ring
+    0 setgray     
+    0 0 1 0 360 arc fill 
+
+    grestore
+} def
+
+% Draw grid of zone plates using nested for loops
+1 1 ROWS {                                    % Loop through rows (1-based)
+    /row exch def
+    1 1 COLS {                                % Loop through columns (1-based)
+        /col exch def
+        col row drawZonePlate                 % pass column and row indices
+    } for
+} for
+
+
+
+%*****************************************************************
+% Orginal drawing code for zone plate
+%*****************************************************************
+
+% center R div M div pointsTOmm                 % calculates center pinhole's actual size in mm
+% /area exch 2 div dup mul pi mul CZ mul def    % area of all clear zones in mm^2
+% /fstop1 area F exch pi div 4 mul sqrt div def % find fstop of Zone plate 
+% /n fstop1 8 div log logsqrt2 div def          % stops from f/8 to fstop1
+% /nf n truncate def                            % find integer of n 
+% /fstop3 n nf sub def                          % find decimal portion of f/stop
+% nf 5 eq                                       % start of portion that finds the
+%    {/fstop2 45 def}                           % zone plate's full stop                          
+%    {nf 2 div truncate 2 mul nf sub 0 eq 
+%        {/fstop2 nf 2 div 2 exch exp 8 mul def}
+%        {nf 1 eq 
+%            {/fstop2 11 def}
+%            {nf 3 eq 
+%                {/fstop 22 def}
+%                {/fstop2 nf 5 sub 2 div 2 exch exp 45 mul def}
+%             ifelse}
+%         ifelse}
+%     ifelse}
+% ifelse                                        % end of finding zone plate's full stop
+
+% /fint fstop2 cvi def                 % prepare full stop for printing
+% /fdec fstop3 100 mul round cvi def   % prepare decimal portion for printing
+% /dist M SLR mul SLR add def          % Calculate distace between printed Zone plate
+%                                      % and the optical center of the lens used to 
+%                                      % photograph it
+
+
+% R dist CZ M fdec fint F              % stack parameter to be printed
+
+% /str 50 string def                   % define string
+% grestore
+%*****************************************************************
+
+
+% /Times-Roman findfont
+% 8 scalefont
+% setfont
+% 0 setgray
+% 1 inch 0.5 inch moveto
+% (Zoneplate  ) show
+% str cvs show
+% (mm    f/) show
+% str cvs show
+% ( +0.) show
+% str cvs show
+% (    Mag=X) show
+% str cvs show
+% (   #Zones = ) show
+% str cvs show
+% (      Distance to SLR's lens = ) show
+% str cvs show
+% (mm) show
+
+showpage
+
