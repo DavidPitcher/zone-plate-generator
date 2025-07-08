@@ -9,45 +9,50 @@
 % Change the following numbers to suit your Zoneplate
 %***********************************************************************
 
-/F 210 def     % change number to whatever focal length in mm you want
+/FOCAL 210 def      % change number to whatever focal length in mm you want
 
-/CZ 6 def     % number of zones
+/RINGS 6 def       % number of zones
 
-/M  1 def    % change number to whatever magnification you want the
-              % printed zone plate to be
+/MAG  1 def       % change number to whatever magnification you want the
+                % printed zone plate to be
 
-/SLR 50 def   % focal length in millimeters you plan to use on your SLR 
-              % to take the picture of the printed Zone Plate created by this 
-              % script. This parameter has no bearing on the printed zone plate
-              % it is asked just to suggest you the correct distance from your
-              % SLR camera to this printed Zone Plate.
+/WAVE_LENGTH 0.00056 def   % change number to whatever wavelength in mm you want
+                % 0.00022 is the wavelength of green light
+                % 0.00056 is the wavelength of daylight
+/ZP_CONST 1.86 def       % Zone plate constant 
 
-/ROWS 2 def   % number of rows of zone plates
-/COLS 9 def   % number of columns of zone plates per row
+
+/ROWS 2 def     % number of rows of zone plates
+/COLS 9 def     % number of columns of zone plates per row
 
 %************************************************************************
-% DO NOT ALTER THE SCRIPT BELLOW THIS LINE
-% Central Pinhole Size - sqrt(0.0022 * Pinhole_Focal_Legnth) * Magnifaction_Factor * Extra_Mag_Factor
+% Area of each zone determined by optimum pinhole size of the center zone
+% Reference information for ideal pinhole size based on light wavelength
+% Central Pinhole Size: ZONE_PLATE_CONST * sqrt(WAVE_LENGTH * PINHOLE_FOCAL_LENGTH)
+% Zone Plate Constant: 1.86 (Values can range from 1.20 to 2.00)
+% Wave Length: 0.0022 mm (green light) or 0.0056 mm (daylight)
+% Example: 1.86 * sqrt(0.0056 * 210)
+%
+% Zone Plate can be magnified to allow for printing larger and photograping onto film
+% Zone Plate Ring Size: sqrt(WAVE_LENGTH * FOCAL_LENGTH) * ZONE_PLATE_CONST * Magnification_Factor
 %************************************************************************
-/R 1 def       % This is an extra magnification or reduction factor   
-               % I suggest you leave it alone (Others use a value of 0.97)
+  
 
-%/inch {72 mul} def                            % converts inches to points
-/mm {2.83 mul} def                            % converts mm to points
-/pointsTOmm {72 div 25.4 mul} def             % converts points to mm
+/mmToPoints {2.83 mul} def                    % converts mm to points
+/pointsToMm {2.83 div} def                    % converts points to mm
 /pi 3.1415926536 def                          % define pi
 /area 0 def                                   % initialize variable "area" to store
                                               % the sum of areas of all zones
 /counter 0 def                                % initialize counter of clear zones
 /logsqrt2 2 sqrt log def                      % log(sqrt(2))
 
-/center 0.0022 F mul sqrt M mul R mul mm def  % size of central pinhole in points  
+/center WAVE_LENGTH FOCAL mul sqrt ZP_CONST mul MAG mul mmToPoints def  % size of central pinhole in points  
 
 /pagewidth 215 def  % width of the page in mm
 /pageheight 279 def % height of the page in mm
 /totalZonePlateSize 21.5 def
-/offsetx {totalZonePlateSize mul} def % offset for x-axis
-/offsety {pageheight exch totalZonePlateSize mul sub} def % offset for y-axis
+/offsetx {totalZonePlateSize mul mmToPoints} def % offset for x-axis
+/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def % offset for y-axis
 
 gsave %save current state configuration
 %******************************************************************
@@ -55,12 +60,12 @@ gsave %save current state configuration
 %*****************************************************************
 % Draw 8" x 10" frame around page
 %*****************************************************************
-1 mm setlinewidth                % Set line width to 2mm
+1 mmToPoints setlinewidth                % Set line width
 newpath
-10 mm 269 mm moveto              % Start at (10mm, 269mm)
-pagewidth 20 sub mm 0 rlineto    % Draw to the right
-0 20 pageheight sub mm rlineto   % Draw down
-20 pagewidth sub mm 0 rlineto    % Draw left
+10 mmToPoints 269 mmToPoints moveto      % Start at (10mm, 269mm)
+pagewidth 20 sub mmToPoints 0 rlineto    % Draw to the right
+0 20 pageheight sub mmToPoints rlineto   % Draw down
+20 pagewidth sub mmToPoints 0 rlineto    % Draw left
 closepath
 stroke
 grestore
@@ -76,13 +81,13 @@ grestore
     gsave
 
     % Translate current position to correct grid position
-    colIndex offsetx mm rowIndex offsety mm translate
+    colIndex offsetx rowIndex offsety translate
     
     % Draw Punch Outline to cut zone plate from film
     0 setgray                                  
-    .5 mm setlinewidth                    
+    .5 mmToPoints setlinewidth                    
     newpath                               
-    0 0 5 mm 0 360 arc 
+    0 0 5 mmToPoints 0 360 arc 
     stroke
 
     % Calculate the center pinhole based on first zone size
@@ -90,7 +95,7 @@ grestore
 
     % Draw all the outer zone plate rings
     newpath 
-    CZ 1 sub -1 1 {                            % CZ-1 = ((# of zones odd# -1)/2)
+    RINGS 1 sub -1 1 {                            % RINGS-1 = ((# of zones odd# -1)/2)
         2 mul dup 1 add                         % Total # of rings left to draw
         0 setgray                               % Black ink  
         0 exch 0 exch sqrt 0 360 arc fill       % SQRT of ring# (odd) 
@@ -105,6 +110,7 @@ grestore
     grestore
 } def
 
+
 % Draw grid of zone plates using nested for loops
 1 1 ROWS {                                    % Loop through rows (1-based)
     /row exch def
@@ -114,7 +120,24 @@ grestore
     } for
 } for
 
+/Times-Roman findfont
+15 scalefont
+setfont
+0 setgray
+%center R div M div pointsTOmm
+1 offsetx 3 offsety moveto
+/str 50 string def
+RINGS FOCAL
+(Focal Length: ) show
+str cvs show
+( mm) show
+(Zones: )
+str cvs show
 
+
+%/area exch 2 div dup mul pi mul CZ mul def 
+% /fstop1 area F exch pi div 4 mul sqrt div def
+% showStackOnPage
 
 %*****************************************************************
 % Orginal drawing code for zone plate
@@ -153,25 +176,6 @@ grestore
 % grestore
 %*****************************************************************
 
-
-% /Times-Roman findfont
-% 8 scalefont
-% setfont
-% 0 setgray
-% 1 inch 0.5 inch moveto
-% (Zoneplate  ) show
-% str cvs show
-% (mm    f/) show
-% str cvs show
-% ( +0.) show
-% str cvs show
-% (    Mag=X) show
-% str cvs show
-% (   #Zones = ) show
-% str cvs show
-% (      Distance to SLR's lens = ) show
-% str cvs show
-% (mm) show
 
 showpage
 
