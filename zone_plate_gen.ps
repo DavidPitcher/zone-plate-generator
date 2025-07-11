@@ -119,7 +119,7 @@ gsave
 
 /drawZonePlateDescription {
     /colIndex exch def
-    /rowIndex exch currentRowIndex add def
+    /rowIndex exch def
     
     gsave
     /Times-Roman findfont
@@ -131,6 +131,40 @@ gsave
     /area exch 2 div dup mul pi mul RINGS mul def 
     /fstop1 area FOCAL exch pi div 4 mul sqrt div def
     /zpDiameter WAVE_LENGTH FOCAL mul RINGS mul sqrt ZP_CONST mul 2 mul def
+    /str 150 string def
+    (Focal Length: ) show
+    FOCAL str cvs show
+    (mm) show
+    ( | Zones: ) show
+    RINGS str cvs show
+    ( | Center Pinhole Size: ) show
+    center pointsToMicrons str cvs show
+    (um) show
+    ( | Zone Plate Diameter: ) show
+    zpDiameter str cvs show
+    (mm) show
+    ( | F/Stop: ) show
+    fstop1 cvi str cvs show
+    grestore
+} def
+
+/drawZoneSieveDescription {
+    /colIndex exch def
+    /rowIndex exch def
+    
+    gsave
+    /Times-Roman findfont
+    10 scalefont
+    setfont
+    0 setgray
+    colIndex offsetx rowIndex offsety moveto
+    /area center 2 div dup mul pi mul area add def % add the are of central pinhole 
+    area sqrt MAG div pointsToMm dup mul   
+    area ==    % translate area from points^2 to mm^2
+    /fstop1 area FOCAL exch pi div 4 mul sqrt div def
+    
+    /zpDiameter FOCAL fstop1 div def 
+
     /str 150 string def
     (Focal Length: ) show
     FOCAL str cvs show
@@ -163,8 +197,8 @@ gsave
     0 0 5 mmToPoints 0 360 arc 
     stroke
 
-    /Z RINGS 2 mul 1 sub 2 idiv 2 mul 1 add def             % Z = number of pinholes in sieve
-    Z -2 2 {                                                % loops to print rings         
+    /Z RINGS 2 mul 1 sub 2 idiv 2 mul 1 add def                 % Z = number of pinholes in sieve
+    Z -2 2 {                                                    % loops to print rings         
         /z1 exch 1 sub def                                      % z1 = # of lowest ring being calculated       
         /zw z1 1 add sqrt z1 sqrt sub center mul 2 div def      % zone width
         /zcr z1 sqrt center mul zw add def                      % zone center diameter
@@ -211,6 +245,8 @@ gsave
 
     0 0 center 2 div 0 360 arc fill                         % print the central pinhole
     counter counter 1 add def 
+    /area center 2 div dup mul pi mul area add def
+
     grestore
 } def
 
@@ -227,8 +263,9 @@ drawBorder
 } for
 /currentRowIndex ROWS currentRowIndex add def
 
-% % Print zone plate description
-% 2.5 1 drawZonePlateDescription
+% Print zone plate description
+3 1 drawZonePlateDescription
+/currentRowIndex 1 currentRowIndex add def
 
 % Draw grid of Zone Sieves
 1 1 ROWS {                                    % Loop through rows (1-based)
@@ -240,12 +277,9 @@ drawBorder
 } for
 /currentRowIndex ROWS currentRowIndex add def
 
-% 1 offsetx 3 offsety moveto
-% /Times-Roman findfont
-%     10 scalefont
-%     setfont
-%     0 setgray
-% (HELLO, THIS IS A ZONE PLATE GENERATOR) show
+% Print zone plate description
+6 1 drawZoneSieveDescription
+/currentRowIndex 1 currentRowIndex add def
 
 
 showpage
