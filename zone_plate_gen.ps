@@ -2,7 +2,6 @@
 %%Title: Zoneplate Generator
 %%Creator: David Pitcher
 %%CreationDate: July 6, 2025
-%%lastModified: July 6, 2025
 %%DocumentPaperSizes: Letter
 
 %***********************************************************************
@@ -15,7 +14,7 @@
 
 /PUNCH_DIAMETER 10 def      % diamter of the punch outline to the out the zone plate
 
-/MAG 1 def                 % change number to whatever magnification you want the
+/MAG 1 def                  % change number to whatever magnification you want the
                             % printed zone plate to be
 
 /WAVE_LENGTH 0.00056 def    % change number to whatever wavelength in mm you want
@@ -29,21 +28,14 @@
                             % decimals are ok (i.e.: 2.3). The larger the number the 
                             % less pinholes in each ring.
 
-/ROWS 3 def     % number of rows of zone plates
-/COLS 9 def     % number of columns of zone plates per row
+/ROWS 1 def     % 3 number of rows of zone plates
+/COLS 1 def     % 9 number of columns of zone plates per row
 
 /DEBUG false def
 
 %************************************************************************
-% Area of each zone determined by optimum pinhole size of the center zone
-% Reference information for ideal pinhole size based on light wavelength
-% Central Pinhole Size: ZONE_PLATE_CONST * sqrt(WAVE_LENGTH * PINHOLE_FOCAL_LENGTH)
-% Zone Plate Constant: 1.86 (Values can range from 1.20 to 2.00)
-% Wave Length: 0.0022 mm (green light) or 0.0056 mm (daylight)
-% Example: 1.86 * sqrt(0.0056 * 210)
-%
-% Zone Plate can be magnified to allow for printing larger and photograping onto film
-% Zone Plate Ring Size: sqrt(WAVE_LENGTH * FOCAL_LENGTH) * ZONE_PLATE_CONST * Magnification_Factor
+% Zone Plate can be magnified to allow for printing larger and 
+% photograping onto film
 %************************************************************************
 /mmToPoints {2.83 mul} def                    % converts mm to points
 /pointsToMm {2.83 div} def                    % converts points to mm
@@ -64,6 +56,39 @@
 
 gsave 
 %******************************************************************
+
+%*****************************************************************
+% Calculate the Current Ring Radius
+%*****************************************************************
+/calc_radius_mm {
+    % ring radius = sqrt(n * λ * f + (n^2 * λ^2) / 4)
+    % n is on stack and represents the ring number
+    dup dup mul WAVE_LENGTH dup mul mul 4 div   % (n^2*λ^2)/4
+    exch WAVE_LENGTH mul FOCAL mul add          % n * λ * f + (n^2*λ^2)/4
+    sqrt MAG mul                                % sqrt(n * λ * f + (n^2 * λ^2) / 4) * M
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Calculate effective f-stop
+% Usage: num_rings focal_length calc_effective_fstop → fstop
+%******************************************************************
+/calc_effective_fstop {
+    % num_rings focal_length on stack
+    % Calculate radius of innermost ring (n=1) in mm
+    /fstop_fl exch def
+    /fstop_r exch def
+
+    /center_ring_area 1 calc_radius_mm MAG div dup mul pi mul def
+
+    % Total effective area = area of center ring * number of rings
+    % Calculate effective diameter from total area
+    % Calculate f-stop: f/D
+    /fstop_effective_area center_ring_area fstop_r mul def
+    /fstop_effective_diameter fstop_effective_area 4 mul pi div sqrt def % D = 2 * sqrt(A/π) = sqrt(4A/π) def
+    fstop_fl fstop_effective_diameter div 0.5 add cvi
+} def
+%*****************************************************************
 
 %*****************************************************************
 % Draw 8" x 10" frame around page
@@ -100,36 +125,29 @@ gsave
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
     
-    % Draw all the outer zone plate rings
-    % Arc command xCord, yCord, radius, startAngle, endAngle
-    % Loop starts at RINGS-1 and counts down(-1) to ring 1
-    % For Loop format: start# incrementby end#
-    RINGS 1 sub -1 1 {
-        % Pops the current loop value and calculate
-        % outer most opaque and transparent ring pairs
-        /opaque_ring exch 2 mul 1 add def
+    1 2 RINGS 2 mul {
+        /n exch def
         
-        % Calculate radius of the rings
-        % sqrt(WAVE_LENGTH * FOCAL * opaque_ring) * ZP_CONST * MAG    
-        /ring_radius FOCAL WAVE_LENGTH mul opaque_ring mul sqrt ZP_CONST mul MAG mul 2 div mmToPoints def
+        /outer_radius_mm n calc_radius_mm def
+        /inner_radius_mm n 1 sub calc_radius_mm def
+        /annulus_width_mm outer_radius_mm inner_radius_mm sub def
+
+        % Calculate the center of the ring (midpoint between inner and outer radii)
+        /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
+
         0 setgray
-        0 0 ring_radius 0 360 arc fill
-
-        1 setgray
-        /ring_radius opaque_ring 1 sub FOCAL mul WAVE_LENGTH mul sqrt ZP_CONST mul MAG mul 2 div mmToPoints def
-        0 0 ring_radius 0 360 arc fill
+        annulus_width_mm mmToPoints setlinewidth
+        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        stroke
+        
     } for 
-
-    % Draw the inner ring
-    0 setgray     
-    0 0 center 2 div 0 360 arc fill 
 
     grestore
 } def
 
 /drawZoneSieve {
     /colIndex exch def
-    /rowIndex exch currentRowIndex add def
+    /rowIndex exch def
 
     gsave
 
@@ -141,10 +159,13 @@ gsave
     .5 mmToPoints setlinewidth                                                   
     0 0 PUNCH_DIAMETER 2 div mmToPoints 0 360 arc 
     stroke
-
-    /Z RINGS 2 mul 1 sub 2 idiv 2 mul 1 add def                 % Z = number of pinholes in sieve
-    Z -2 2 {                                                    % loops to print rings         
-        /z1 exch 1 sub def                                      % z1 = # of lowest ring being calculated       
+    
+    /Z RINGS 2 mul 1 sub def                                    % Z = number of zones in the sieve
+    (Rings: ) print                                    
+    Z ==
+    (\n) print
+    Z -2 2 {                                                   
+        /z1 exch 1 sub def                                      % z1 = Outer most ring being calculated       
         /zw z1 1 add sqrt z1 sqrt sub center mul 2 div def      % zone width
         /zcr z1 sqrt center mul zw add def                      % zone center diameter
         /perimeter pi zcr mul def                               % perimeter of zcr
@@ -197,18 +218,14 @@ gsave
 /drawZonePlateDescription {
     /colIndex exch def
     /rowIndex exch def
-    
     gsave
+    
+    colIndex offsetx rowIndex offsety moveto
+    
     /Times-Roman findfont
     10 scalefont
     setfont
     0 setgray
-    colIndex offsetx rowIndex offsety moveto
-
-    /zpDiameter WAVE_LENGTH FOCAL mul RINGS mul sqrt ZP_CONST mul MAG mul 2 mul def
-    /zpFocal zpDiameter RINGS 2 mul 1 sub WAVE_LENGTH mul div def
-    /fstop zpFocal zpDiameter div def
-
     /str 150 string def
     (Focal Length: ) show
     FOCAL str cvs show
@@ -219,10 +236,11 @@ gsave
     center pointsToMicrons str cvs show
     (um) show
     ( | Zone Plate Diameter: ) show
-    zpDiameter str cvs show
+    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
     (mm) show
     ( | F/Stop: ) show
-    fstop cvi str cvs show
+    RINGS FOCAL calc_effective_fstop str cvs show
+    
     grestore
 } def
 
@@ -265,11 +283,11 @@ gsave
 drawBorder
 
 %Draw grid of Zone Plated
-1 1 ROWS {                                    % Loop through rows (1-based)
-    /row exch def
-    1 1 COLS {                                % Loop through columns (1-based)
+0 1 ROWS 1 sub {                                    
+     /row exch def
+    1 1 COLS {                                
         /col exch def
-        row col drawZonePlate                 % pass column and row indices
+        row currentRowIndex add col drawZonePlate                 
     } for
 } for
 /currentRowIndex ROWS currentRowIndex add def
@@ -278,18 +296,18 @@ drawBorder
 currentRowIndex 1 drawZonePlateDescription
 /currentRowIndex 1 currentRowIndex add def
 
-% Draw grid of Zone Sieves
-% 1 1 ROWS {                                    % Loop through rows (1-based)
+% % Draw grid of Zone Sieves
+% 0 1 ROWS 1 sub {                                    
 %     /row exch def
-%     1 1 COLS {                                % Loop through columns (1-based)
+%     1 1 COLS {                                
 %         /col exch def
-%         row col drawZoneSieve                 % pass column and row indices
+%         row currentRowIndex add col drawZoneSieve                 
 %     } for
 % } for
 % /currentRowIndex ROWS currentRowIndex add def
 
 % Print zone plate description
-% 6 1 drawZoneSieveDescription
+% currentRowIndex 1drawZoneSieveDescription
 % /currentRowIndex 1 currentRowIndex add def
 
 
