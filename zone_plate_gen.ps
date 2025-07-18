@@ -15,21 +15,23 @@
 
 /PUNCH_DIAMETER 10 def      % diamter of the punch outline to the out the zone plate
 
-/MAG 1 def                  % change number to whatever magnification you want the
+/MAG 20 def                 % change number to whatever magnification you want the
                             % printed zone plate to be
 
 /WAVE_LENGTH 0.00056 def    % change number to whatever wavelength in mm you want
                             % 0.00022 is the wavelength of green light
                             % 0.00056 is the wavelength of daylight
 
-/SIEVE_SCALE 1.5 def        % Scale factor for sieve holes on a ring
+/SIEVE_SCALE 1.5 def        % scale factor for sieve holes on a ring
 
-/SIEVE_SPACE 0.03  def      % Space between sieve holes in mm
+/SIEVE_SPACE 0.1  def       % space between sieve holes in mm
+                            % The greater the magnification, the larger the number should be
 
 /ROWS 3 def                 % 3 number of rows of zone plates
 /COLS 9 def                 % 9 number of columns of zone plates per row
 
-/DEBUG false def
+/TYPE (PHOTON) def          % type of zone plate to generate
+                            % valid values are GRID, PLATE, SIEVE, PHOTON
 
 %************************************************************************
 % Constants
@@ -346,50 +348,364 @@ gsave
 } def
 %*****************************************************************
 
-% Draw border around the page
-drawBorder
+%*****************************************************************
+% Draw Zone Page with all types of Zone Plates in Grid Pattern
+% Usage: rowIndex drawZonePage → updatedRowIndex
+%*****************************************************************
+/drawZonePage {
+    /startRowIndex exch def
+    /currentRowIndex startRowIndex def
 
-%Draw grid of Zone Plates
-0 1 ROWS 1 sub {                                    
-     /row exch def
-    1 1 COLS {                                
-        /col exch def
-        row currentRowIndex add col drawZonePlate                 
+    drawBorder
+    
+    %Draw grid of Zone Plates
+    0 1 ROWS 1 sub {                                    
+        /row exch def
+        1 1 COLS {                                
+            /col exch def
+            row currentRowIndex add col drawZonePlate                 
+        } for
     } for
-} for
-/currentRowIndex ROWS currentRowIndex add def
-
-%Print zone plate description
-currentRowIndex 1 drawZonePlateDescription
-/currentRowIndex 1 currentRowIndex add def
-
-% Draw grid of Zone Sieves
-0 1 ROWS 1 sub {                                    
-    /row exch def
-    1 1 COLS {                                
-        /col exch def
-        row currentRowIndex add col drawZoneSieve                 
+    /currentRowIndex ROWS currentRowIndex add def
+    
+    %Print zone plate description
+    currentRowIndex 1 drawZonePlateDescription
+    /currentRowIndex 1 currentRowIndex add def
+    
+    % Draw grid of Zone Sieves
+    0 1 ROWS 1 sub {                                    
+        /row exch def
+        1 1 COLS {                                
+            /col exch def
+            row currentRowIndex add col drawZoneSieve                 
+        } for
     } for
-} for
-/currentRowIndex ROWS currentRowIndex add def
-
-% Print zone sieve description
-currentRowIndex 1 drawZoneSieveDescription
-/currentRowIndex 1 currentRowIndex add def
-
-% Draw grid of Photo Sieves
-0 1 ROWS 1 sub {                                    
-    /row exch def
-    1 1 COLS {                                
-        /col exch def
-        row currentRowIndex add col drawPhotonSieve                 
+    /currentRowIndex ROWS currentRowIndex add def
+    
+    % Print zone sieve description
+    currentRowIndex 1 drawZoneSieveDescription
+    /currentRowIndex 1 currentRowIndex add def
+    
+    % Draw grid of Photo Sieves
+    0 1 ROWS 1 sub {                                    
+        /row exch def
+        1 1 COLS {                                
+            /col exch def
+            row currentRowIndex add col drawPhotonSieve                 
+        } for
     } for
-} for
-/currentRowIndex ROWS currentRowIndex add def
+    /currentRowIndex ROWS currentRowIndex add def
+    
+    % Print photon sieve description
+    currentRowIndex 1 drawZoneSieveDescription
+    /currentRowIndex 1 currentRowIndex add def
+    
+    % Return the updated row index
+    currentRowIndex
+} def
+%*****************************************************************
 
-% Print photon sieve description
-currentRowIndex 1 drawZoneSieveDescription
-/currentRowIndex 1 currentRowIndex add def
+%*****************************************************************
+% Draw a Single Zone Plate Centered on the Page
+% Usage: drawCenteredZonePlate → -
+%*****************************************************************
+/drawCenteredZonePlate {
+    gsave
+    % Clear any existing drawing
+    clippath 1 setgray fill
+    0 setgray
+    
+    % Calculate center position for the zone plate
+    % Center of page is at (pagewidth/2, pageheight/2)
+    pagewidth 2 div mmToPoints
+    pageheight 2 div mmToPoints
+    translate
+    
+    % Draw zone plate at the center
+    % Use existing drawZonePlate logic but without the translation
+    % since we've already positioned at the center
+    
+    % Draw Punch Outline
+    0 setgray                                  
+    .5 mmToPoints setlinewidth                                                  
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    stroke
+    
+    1 2 RINGS 2 mul {
+        /n exch def
+        
+        /outer_radius_mm n calc_radius_mm def
+        /inner_radius_mm n 1 sub calc_radius_mm def
+        /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
-showpage
+        % Calculate the center of the ring (midpoint between inner and outer radii)
+        /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
+
+        0 setgray
+        annulus_width_mm mmToPoints setlinewidth
+        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        stroke
+    } for
+    
+    % Draw description at the bottom of the page
+    grestore
+    
+    % Position for description - centered at bottom of page
+    pagewidth 2 div mmToPoints
+    20 mmToPoints
+    moveto
+    
+    % Center align text
+    /Times-Roman findfont
+    12 scalefont
+    setfont
+    0 setgray
+    
+    % Create description text
+    /str 150 string def
+    /description (Zone Plate - Focal Length: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    FOCAL str cvs show
+    (mm | Zones: ) show
+    RINGS str cvs show
+    ( | Diameter: ) show
+    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    (mm | F/Stop: ) show
+    RINGS FOCAL calc_effective_fstop str cvs show
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Draw a Single Zone Sieve Centered on the Page
+% Usage: drawCenteredZoneSieve → -
+%*****************************************************************
+/drawCenteredZoneSieve {
+    gsave
+    % Clear any existing drawing
+    clippath 1 setgray fill
+    0 setgray
+    
+    % Calculate center position for the zone sieve
+    % Center of page is at (pagewidth/2, pageheight/2)
+    pagewidth 2 div mmToPoints
+    pageheight 2 div mmToPoints
+    translate
+    
+    % Draw zone sieve at the center
+    % Use existing drawZoneSieve logic but without the translation
+    
+    % Draw Punch Outline
+    0 setgray                                  
+    .5 mmToPoints setlinewidth                                                   
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    stroke
+    
+    1 2 RINGS 2 mul {
+        /n exch def
+        
+        /outer_radius_mm n calc_radius_mm def
+        /inner_radius_mm n 1 sub calc_radius_mm def
+        /annulus_width_mm outer_radius_mm inner_radius_mm sub def
+
+        /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
+        n 1 eq {
+            0 setgray
+            annulus_width_mm mmToPoints setlinewidth
+            0 0 ring_center_radius_mm mmToPoints 0 360 arc
+            stroke 
+        } {
+            /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
+            /angular_spacing 360 num_circles div def
+            rand 360 mod rotate  % Rotate by a random angle
+            1 1 num_circles {
+               0 setgray
+               angular_spacing rotate
+               ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
+            } for
+        } ifelse
+    } for
+    
+    % Draw description at the bottom of the page
+    grestore
+    
+    % Position for description - centered at bottom of page
+    pagewidth 2 div mmToPoints
+    20 mmToPoints
+    moveto
+    
+    % Center align text
+    /Times-Roman findfont
+    12 scalefont
+    setfont
+    0 setgray
+    
+    % Create description text
+    /str 150 string def
+    /description (Zone Sieve - Focal Length: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    FOCAL str cvs show
+    (mm | Zones: ) show
+    RINGS str cvs show
+    ( | Diameter: ) show
+    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    (mm | F/Stop: ) show
+    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Draw a Single Photon Sieve Centered on the Page
+% Usage: drawCenteredPhotonSieve → -
+%*****************************************************************
+/drawCenteredPhotonSieve {
+    gsave
+    % Clear any existing drawing
+    clippath 1 setgray fill
+    0 setgray
+    
+    % Calculate center position for the photon sieve
+    % Center of page is at (pagewidth/2, pageheight/2)
+    pagewidth 2 div mmToPoints
+    pageheight 2 div mmToPoints
+    translate
+    
+    % Draw photon sieve at the center
+    % Use existing drawPhotonSieve logic but without the translation
+    
+    % Draw Punch Outline
+    0 setgray                                  
+    .5 mmToPoints setlinewidth                                                   
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    stroke
+    
+    1 2 RINGS 2 mul {
+        /n exch def
+        
+        /outer_radius_mm n 1 add calc_radius_mm def
+        /inner_radius_mm n calc_radius_mm def
+        /annulus_width_mm outer_radius_mm inner_radius_mm sub def
+
+        /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
+        /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
+        /angular_spacing 360 num_circles div def
+        rand 360 mod rotate
+        1 1 num_circles {
+            0 setgray
+            angular_spacing rotate
+            ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
+        } for
+    } for
+    
+    % Draw description at the bottom of the page
+    grestore
+    
+    % Position for description - centered at bottom of page
+    pagewidth 2 div mmToPoints
+    20 mmToPoints
+    moveto
+    
+    % Center align text
+    /Times-Roman findfont
+    12 scalefont
+    setfont
+    0 setgray
+    
+    % Create description text
+    /str 150 string def
+    /description (Photon Sieve - Focal Length: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    FOCAL str cvs show
+    (mm | Zones: ) show
+    RINGS str cvs show
+    ( | Diameter: ) show
+    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    (mm | F/Stop: ) show
+    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Draw a Single Optical Element Centered on the Page
+% Usage: elementType drawCenteredElement → -
+% elementType: 1 = Zone Plate, 2 = Zone Sieve, 3 = Photon Sieve
+%*****************************************************************
+/drawCenteredElement {
+    /elementType exch def
+    
+    % Clear any previous page content
+    clippath 1 setgray fill
+    0 setgray
+    
+    % Select the appropriate drawing function based on elementType
+    elementType 1 eq {
+        % Draw Zone Plate
+        drawCenteredZonePlate
+    } {
+        elementType 2 eq {
+            % Draw Zone Sieve
+            drawCenteredZoneSieve
+        } {
+            elementType 3 eq {
+                % Draw Photon Sieve
+                drawCenteredPhotonSieve
+            } {
+                % Invalid element type - display error
+                /Times-Bold findfont 14 scalefont setfont
+                pagewidth 2 div mmToPoints pageheight 2 div mmToPoints moveto
+                (Error: Invalid element type) stringwidth pop 2 div neg 0 rmoveto
+                (Error: Invalid element type) show
+            } ifelse
+        } ifelse
+    } ifelse
+    
+    showpage
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Main execution based on TYPE variable
+%*****************************************************************
+/executeDrawing {
+    % Check the TYPE variable and execute appropriate drawing
+    TYPE (GRID) eq {
+        % Draw grid of all elements
+        currentRowIndex drawZonePage /currentRowIndex exch def
+        showpage
+    } {
+        TYPE (PLATE) eq {
+            % Draw centered Zone Plate
+            1 drawCenteredElement
+        } {
+            TYPE (SIEVE) eq {
+                % Draw centered Zone Sieve
+                2 drawCenteredElement
+            } {
+                TYPE (PHOTON) eq {
+                    % Draw centered Photon Sieve
+                    3 drawCenteredElement
+                } {
+                    % Invalid TYPE - display error and show grid as default
+                    /Times-Bold findfont 14 scalefont setfont
+                    pagewidth 2 div mmToPoints pageheight 2 div mmToPoints moveto
+                    (Error: Invalid TYPE. Using default GRID view.) stringwidth pop 2 div neg 0 rmoveto
+                    (Error: Invalid TYPE. Using default GRID view.) show
+                    
+                    % Wait a moment to show error
+                    1000 { 1 add } repeat
+                    
+                    % Show grid as default
+                    currentRowIndex drawZonePage /currentRowIndex exch def
+                    showpage
+                } ifelse
+            } ifelse
+        } ifelse
+    } ifelse
+} def
+
+% Execute drawing based on TYPE
+executeDrawing
+
 
