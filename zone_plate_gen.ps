@@ -5,7 +5,8 @@
 %%DocumentPaperSizes: Letter
 
 %***********************************************************************
-% Change the following numbers to suit your Zoneplate
+% Change the following numbers to suit zone plate or sieve
+% ARGUMENTS:
 %***********************************************************************
 
 /FOCAL 210 def              % change number to whatever focal length in mm you want
@@ -23,33 +24,31 @@
 
 /SIEVE_SCALE 1.5 def        % Scale factor for sieve holes on a ring
 
-/SIEVE_SPACE 0.03  def        % Space between sieve holes in mm
+/SIEVE_SPACE 0.03  def      % Space between sieve holes in mm
 
-/ROWS 1 def     % 3 number of rows of zone plates
-/COLS 1 def     % 9 number of columns of zone plates per row
+/ROWS 3 def                 % 3 number of rows of zone plates
+/COLS 9 def                 % 9 number of columns of zone plates per row
 
 /DEBUG false def
 
 %************************************************************************
-% Zone Plate can be magnified to allow for printing larger and 
-% photograping onto film
+% Constants
 %************************************************************************
-/mmToPoints {2.83 mul} def                    % converts mm to points
-/pointsToMm {2.83 div} def                    % converts points to mm
-/pointsToMicrons {352.778 mul} def            % converts points to microns (µm)
-/pi 3.1415926536 def                          % define pi
-/area 0 def                                   % initialize variable "area" to store
-                                              % the sum of areas of all zones
-/counter 0 def                                % initialize counter of clear zones
-/logsqrt2 2 sqrt log def                      % log(sqrt(2))
-
-%/center WAVE_LENGTH FOCAL mul sqrt ZP_CONST mul MAG mul mmToPoints def  % size of central pinhole in points  
-/pagewidth 215 def  % width of the page in mm
-/pageheight 279 def % height of the page in mm
-/totalZonePlateSize 21.5 def
+/pi 3.1415926536 def            
+/pagewidth 216 def  
+/pageheight 279 def 
+/totalZonePlateSize 21.5 def    % controls spacing between zone plates
 /currentRowIndex 1 def
-/offsetx {totalZonePlateSize mul mmToPoints} def % offset for x-axis
-/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def % offset for y-axis
+%************************************************************************
+
+%************************************************************************
+% Unit Conversion Definitions   
+%************************************************************************
+/mmToPoints {2.83 mul} def                    
+/pointsToMm {2.83 div} def                    
+/pointsToMicrons {352.778 mul} def            
+/offsetx {totalZonePlateSize mul mmToPoints} def 
+/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def 
 
 gsave 
 %******************************************************************
@@ -98,6 +97,49 @@ gsave
     /fstop_effective_area center_ring_area fstop_r mul def
     /fstop_effective_diameter fstop_effective_area 4 mul pi div sqrt def % D = 2 * sqrt(A/π) = sqrt(4A/π) def
     fstop_fl fstop_effective_diameter div 0.5 add cvi
+} def
+%*****************************************************************
+
+%*****************************************************************
+% Calculate effective f-stop of a zone sieve
+% Usage: num_rings focal_length calc_sieve_effective_fstop → fstop
+%*****************************************************************
+/calc_sieve_effective_fstop {
+    % num_rings focal_length on stack
+    /sieve_fstop_fl exch def
+    /sieve_fstop_r exch def
+    
+    % Calculate center ring area (always solid for zone sieve)
+    /center_ring_area 1 calc_radius_mm MAG div dup mul pi mul def
+    
+    % Initialize total effective area with center ring
+    /sieve_total_area center_ring_area def
+    2 2 sieve_fstop_r 2 mul {
+        /n exch def
+        
+        /outer_radius_mm n calc_radius_mm def
+        /inner_radius_mm n 1 sub calc_radius_mm def
+        /annulus_width_mm outer_radius_mm inner_radius_mm sub def
+        
+        % Calculate the center of the ring (midpoint between inner and outer radii)
+        /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
+        
+        % Calculate number of circles in this ring
+        /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
+        
+        % Calculate area of each circle in this ring
+        /sieve_hole_radius annulus_width_mm SIEVE_SCALE mul 2 div def
+        /sieve_hole_area sieve_hole_radius dup mul pi mul def
+        
+        % Add total area of all holes in this ring to the cumulative area
+        /sieve_total_area sieve_total_area num_circles sieve_hole_area mul add def
+    } for
+    
+    % Calculate effective diameter from total area
+    /sieve_effective_diameter sieve_total_area 4 mul pi div sqrt def % D = sqrt(4A/π)
+    
+    % Calculate f-stop: f/D and round to nearest integer
+    sieve_fstop_fl sieve_effective_diameter div 0.5 add cvi
 } def
 %*****************************************************************
 
@@ -182,7 +224,6 @@ gsave
         /inner_radius_mm n 1 sub calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
-        % Calculate the center of the ring (midpoint between inner and outer radii)
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
         n 1 eq {
             0 setgray
@@ -191,11 +232,11 @@ gsave
             stroke 
         } {
             /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
-            /rotation 360 num_circles div def
-            % Draw circles along the annulus (optional)
-            1 1 num_circles {               
-               0 setgray 
-               rotation rotate
+            /angular_spacing 360 num_circles div def
+            rand 360 mod rotate  % Rotate by a random angle
+            1 1 num_circles {
+               0 setgray
+               angular_spacing rotate
                ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
             } for
         } ifelse
@@ -230,14 +271,13 @@ gsave
         /inner_radius_mm n calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
-        % Calculate the center of the ring (midpoint between inner and outer radii)
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
         /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
-        /rotation 360 num_circles div def
-        % Draw circles along the annulus (optional)
-        1 1 num_circles {               
-            0 setgray 
-            rotation rotate
+        /angular_spacing 360 num_circles div def
+        rand 360 mod rotate
+        1 1 num_circles {
+            0 setgray
+            angular_spacing rotate
             ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
         } for
     } for
@@ -246,6 +286,9 @@ gsave
 } def
 %*****************************************************************  
 
+%*****************************************************************
+% Draw Zone Plate Description
+%*****************************************************************
 /drawZonePlateDescription {
     /colIndex exch def
     /rowIndex exch def
@@ -271,7 +314,11 @@ gsave
     
     grestore
 } def
+%*****************************************************************
 
+%*****************************************************************
+% Draw Zone Sieve Description
+%*****************************************************************
 /drawZoneSieveDescription {
     /colIndex exch def
     /rowIndex exch def
@@ -293,44 +340,44 @@ gsave
     RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
     (mm) show
     ( | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
+    RINGS FOCAL calc_sieve_effective_fstop str cvs show
     
     grestore
 } def
-
+%*****************************************************************
 
 % Draw border around the page
 drawBorder
 
-% %Draw grid of Zone Plated
-% 0 1 ROWS 1 sub {                                    
-%      /row exch def
-%     1 1 COLS {                                
-%         /col exch def
-%         row currentRowIndex add col drawZonePlate                 
-%     } for
-% } for
-% /currentRowIndex ROWS currentRowIndex add def
+%Draw grid of Zone Plates
+0 1 ROWS 1 sub {                                    
+     /row exch def
+    1 1 COLS {                                
+        /col exch def
+        row currentRowIndex add col drawZonePlate                 
+    } for
+} for
+/currentRowIndex ROWS currentRowIndex add def
 
-% %Print zone plate description
-% currentRowIndex 1 drawZonePlateDescription
-% /currentRowIndex 1 currentRowIndex add def
-
-% % Draw grid of Zone Sieves
-% 0 1 ROWS 1 sub {                                    
-%     /row exch def
-%     1 1 COLS {                                
-%         /col exch def
-%         row currentRowIndex add col drawZoneSieve                 
-%     } for
-% } for
-% /currentRowIndex ROWS currentRowIndex add def
-
-% % Print zone plate description
-% currentRowIndex 1 drawZoneSieveDescription
-% /currentRowIndex 1 currentRowIndex add def
+%Print zone plate description
+currentRowIndex 1 drawZonePlateDescription
+/currentRowIndex 1 currentRowIndex add def
 
 % Draw grid of Zone Sieves
+0 1 ROWS 1 sub {                                    
+    /row exch def
+    1 1 COLS {                                
+        /col exch def
+        row currentRowIndex add col drawZoneSieve                 
+    } for
+} for
+/currentRowIndex ROWS currentRowIndex add def
+
+% Print zone sieve description
+currentRowIndex 1 drawZoneSieveDescription
+/currentRowIndex 1 currentRowIndex add def
+
+% Draw grid of Photo Sieves
 0 1 ROWS 1 sub {                                    
     /row exch def
     1 1 COLS {                                
@@ -340,10 +387,9 @@ drawBorder
 } for
 /currentRowIndex ROWS currentRowIndex add def
 
-% % Print zone plate description
-% currentRowIndex 1 drawZoneSieveDescription
-% /currentRowIndex 1 currentRowIndex add def
-
+% Print photon sieve description
+currentRowIndex 1 drawZoneSieveDescription
+/currentRowIndex 1 currentRowIndex add def
 
 showpage
 
