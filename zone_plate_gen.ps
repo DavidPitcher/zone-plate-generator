@@ -451,28 +451,42 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
-    moveto
-    
-    % Center align text
     /Times-Roman findfont
     12 scalefont
     setfont
     0 setgray
     
-    % Create description text
+    % Calculate total width of all description text components
     /str 150 string def
+    /total_width 0 def
     /description (Zone Plate - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
+    /total_width total_width description stringwidth pop add def
+    /focal_str FOCAL str cvs def
+    /total_width total_width focal_str stringwidth pop add def
+    /total_width total_width (mm | Zones: ) stringwidth pop add def
+    /rings_str RINGS str cvs def
+    /total_width total_width rings_str stringwidth pop add def
+    /total_width total_width ( | Diameter: ) stringwidth pop add def
+    /diam_str RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs def
+    /total_width total_width diam_str stringwidth pop add def
+    /total_width total_width (mm | F/Stop: ) stringwidth pop add def
+    /fstop_str RINGS FOCAL calc_effective_fstop str cvs def
+    /total_width total_width fstop_str stringwidth pop add def
+    
+    % Position text with calculated center offset
+    pagewidth 2 div mmToPoints total_width 2 div sub
+    20 mmToPoints
+    moveto
+    
+    % Show all text pieces in sequence
     description show
-    FOCAL str cvs show
+    focal_str show
     (mm | Zones: ) show
-    RINGS str cvs show
+    rings_str show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    diam_str show
     (mm | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
+    fstop_str show
 } def
 %*****************************************************************
 
@@ -530,28 +544,42 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
-    moveto
-    
-    % Center align text
     /Times-Roman findfont
     12 scalefont
     setfont
     0 setgray
     
-    % Create description text
+    % Calculate total width of all description text components
     /str 150 string def
+    /total_width 0 def
     /description (Zone Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
+    /total_width total_width description stringwidth pop add def
+    /focal_str FOCAL str cvs def
+    /total_width total_width focal_str stringwidth pop add def
+    /total_width total_width (mm | Zones: ) stringwidth pop add def
+    /rings_str RINGS str cvs def
+    /total_width total_width rings_str stringwidth pop add def
+    /total_width total_width ( | Diameter: ) stringwidth pop add def
+    /diam_str RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs def
+    /total_width total_width diam_str stringwidth pop add def
+    /total_width total_width (mm | F/Stop: ) stringwidth pop add def
+    /fstop_str RINGS FOCAL calc_sieve_effective_fstop str cvs def
+    /total_width total_width fstop_str stringwidth pop add def
+    
+    % Position text with calculated center offset
+    pagewidth 2 div mmToPoints total_width 2 div sub
+    20 mmToPoints
+    moveto
+    
+    % Show all text pieces in sequence
     description show
-    FOCAL str cvs show
+    focal_str show
     (mm | Zones: ) show
-    RINGS str cvs show
+    rings_str show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    diam_str show
     (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+    fstop_str show
 } def
 %*****************************************************************
 
@@ -602,28 +630,42 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
-    moveto
-    
-    % Center align text
     /Times-Roman findfont
     12 scalefont
     setfont
     0 setgray
     
-    % Create description text
+    % Calculate total width of all description text components
     /str 150 string def
+    /total_width 0 def
     /description (Photon Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
+    /total_width total_width description stringwidth pop add def
+    /focal_str FOCAL str cvs def
+    /total_width total_width focal_str stringwidth pop add def
+    /total_width total_width (mm | Zones: ) stringwidth pop add def
+    /rings_str RINGS str cvs def
+    /total_width total_width rings_str stringwidth pop add def
+    /total_width total_width ( | Diameter: ) stringwidth pop add def
+    /diam_str RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs def
+    /total_width total_width diam_str stringwidth pop add def
+    /total_width total_width (mm | F/Stop: ) stringwidth pop add def
+    /fstop_str RINGS FOCAL calc_sieve_effective_fstop str cvs def
+    /total_width total_width fstop_str stringwidth pop add def
+    
+    % Position text with calculated center offset
+    pagewidth 2 div mmToPoints total_width 2 div sub
+    20 mmToPoints
+    moveto
+    
+    % Show all text pieces in sequence
     description show
-    FOCAL str cvs show
+    focal_str show
     (mm | Zones: ) show
-    RINGS str cvs show
+    rings_str show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    diam_str show
     (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+    fstop_str show
 } def
 %*****************************************************************
 
