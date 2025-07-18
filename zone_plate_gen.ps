@@ -226,27 +226,20 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n 1 add calc_radius_mm def
+        /inner_radius_mm n calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         % Calculate the center of the ring (midpoint between inner and outer radii)
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
-        n 1 eq {
-            0 setgray
-            annulus_width_mm mmToPoints setlinewidth
-            0 0 ring_center_radius_mm mmToPoints 0 360 arc
-            stroke 
-        } {
-            /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
-            /rotation 360 num_circles div def
-            % Draw circles along the annulus (optional)
-            1 1 num_circles {               
-               0 setgray 
-               rotation rotate
-               ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
-            } for
-        } ifelse
+        /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
+        /rotation 360 num_circles div def
+        % Draw circles along the annulus (optional)
+        1 1 num_circles {               
+            0 setgray 
+            rotation rotate
+            ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
+        } for
     } for
 
     grestore
