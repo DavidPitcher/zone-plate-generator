@@ -180,3 +180,11 @@ Key formulas used:
 ## License
 
 See the LICENSE file for details.
+
+## Attribution
+
+The PostScript concepts and original ideas for this generator were inspired by the work of Guillermo Peñate.
+For additional details and background on zone plates and sieves, see:
+- [Zone Plate and Sieves by Guillermo Peñate](https://pinholeday.org/docs/Zone_Plate_and_Sieves/)
+
+
