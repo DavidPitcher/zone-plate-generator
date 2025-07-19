@@ -13,14 +13,14 @@
 /FOCAL 210 def              
 
 % number of opaque rings to generate
-/RINGS 6 def                
+/RINGS 8 def                
 
 % diamter of the punch outline to the out the zone plate
 /PUNCH_DIAMETER 10 def      
 
 % change number to whatever magnification you want the
 % printed zone plate to be
-/MAG 1 def                  
+/MAG 15 def                  
 
 % change number to whatever wavelength in mm you want
 % 0.00022 is the wavelength of green light
@@ -32,7 +32,7 @@
 
 % space between sieve holes in mm
 % the greater the magnification, the larger the number should be
-/SIEVE_SPACE 0.1  def       
+/SIEVE_SPACE 0.46  def       
 
 % number of rows of zone plates
 /ROWS 3 def                 
@@ -42,7 +42,10 @@
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (GRID) def
+/TYPE (PHOTON) def
+
+% duplucating camera focal length used
+/DUP_FOCAL 180 def
 
 %************************************************************************
 % Constants
@@ -57,6 +60,7 @@
 %************************************************************************
 % Unit Conversion Definitions   
 %************************************************************************
+/mmToInches {25.4 div} def
 /mmToPoints {2.83 mul} def                    
 /pointsToMm {2.83 div} def                    
 /pointsToMicrons {352.778 mul} def            
@@ -329,7 +333,7 @@ gsave
     (mm) show
     ( | F/Stop: ) show
     RINGS FOCAL calc_effective_fstop str cvs show
-    
+
     grestore
 } def
 %*****************************************************************
@@ -359,7 +363,7 @@ gsave
     (mm) show
     ( | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
-    
+
     grestore
 } def
 %*****************************************************************
@@ -468,7 +472,7 @@ gsave
     
     % Position for description - centered at bottom of page
     pagewidth 2 div 50 sub mmToPoints
-    10 mmToPoints
+    15 mmToPoints
     moveto
     
     % Center align text
@@ -489,6 +493,23 @@ gsave
     RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm | F/Stop: ) show
     RINGS FOCAL calc_effective_fstop str cvs show
+    
+    % Add camera positioning information on a second line
+    pagewidth 2 div 65 sub mmToPoints
+    10 mmToPoints
+    moveto
+    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
+    /description (Magnification: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    MAG str cvs show
+    (x | Camera Focal Length: ) show
+    DUP_FOCAL str cvs show
+    (mm | Camera Distance: ) show
+    cameraDist 0.5 add cvi str cvs show
+    (mm / ) show
+    cameraDist mmToInches 0.5 add cvi str cvs show
+    (in) show
 
 } def
 %*****************************************************************
@@ -548,7 +569,7 @@ gsave
     
     % Position for description - centered at bottom of page
     pagewidth 2 div 50 sub mmToPoints
-    10 mmToPoints
+    15 mmToPoints
     moveto
     
     % Center align text
@@ -570,6 +591,22 @@ gsave
     (mm | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
     
+    % Add camera positioning information on a second line
+    pagewidth 2 div 65 sub mmToPoints
+    10 mmToPoints
+    moveto
+    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
+    /description (Magnification: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    MAG str cvs show
+    (x | Camera Focal Length: ) show
+    DUP_FOCAL str cvs show
+    (mm | Camera Distance: ) show
+    cameraDist 0.5 add cvi str cvs show
+    (mm / ) show
+    cameraDist mmToInches 0.5 add cvi str cvs show
+    (in) show
 } def
 %*****************************************************************
 
@@ -621,7 +658,7 @@ gsave
     
     % Position for description - centered at bottom of page
     pagewidth 2 div 50 sub mmToPoints
-    10 mmToPoints
+    15 mmToPoints
     moveto
     
     % Center align text
@@ -642,6 +679,23 @@ gsave
     RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
+    
+    % Add camera positioning information on a second line
+    pagewidth 2 div 65 sub mmToPoints
+    10 mmToPoints
+    moveto
+    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
+    /description (Magnification: ) def
+    description stringwidth pop 2 div neg 0 rmoveto
+    description show
+    MAG str cvs show
+    (x | Camera Focal Length: ) show
+    DUP_FOCAL str cvs show
+    (mm | Camera Distance: ) show
+    cameraDist 0.5 add cvi str cvs show
+    (mm / ) show
+    cameraDist mmToInches 0.5 add cvi str cvs show
+    (in) show
 } def
 %*****************************************************************
 
