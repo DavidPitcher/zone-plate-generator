@@ -42,7 +42,7 @@
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (PHOTON) def
+/TYPE (GRID) def
 
 %************************************************************************
 % Constants
@@ -71,10 +71,15 @@ gsave
 %*****************************************************************
 /calc_radius_mm {
     % ring radius = sqrt(n * λ * f + (n^2 * λ^2) / 4)
+    % apply_mag is on the stack
     % n is on stack and represents the ring number
+    /apply_mag exch def
     dup dup mul WAVE_LENGTH dup mul mul 4 div   % (n^2*λ^2)/4
     exch WAVE_LENGTH mul FOCAL mul add          % n * λ * f + (n^2*λ^2)/4
-    sqrt MAG mul                                % sqrt(n * λ * f + (n^2 * λ^2) / 4) * M
+    sqrt                                        % sqrt(n * λ * f + (n^2 * λ^2) / 4)
+    apply_mag {
+        MAG mul
+    } if
 } def
 %*****************************************************************
 
@@ -102,7 +107,7 @@ gsave
     /fstop_fl exch def
     /fstop_r exch def
 
-    /center_ring_area 1 calc_radius_mm MAG div dup mul pi mul def
+    /center_ring_area 1 false calc_radius_mm dup mul pi mul def
 
     % Total effective area = area of center ring * number of rings
     % Calculate effective diameter from total area
@@ -123,15 +128,15 @@ gsave
     /sieve_fstop_r exch def
     
     % Calculate center ring area (always solid for zone sieve)
-    /center_ring_area 1 calc_radius_mm MAG div dup mul pi mul def
+    /center_ring_area 1 false calc_radius_mm dup mul pi mul def
     
     % Initialize total effective area with center ring
     /sieve_total_area center_ring_area def
     2 2 sieve_fstop_r 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n false calc_radius_mm def
+        /inner_radius_mm n 1 sub false calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
         
         % Calculate the center of the ring (midpoint between inner and outer radii)
@@ -194,8 +199,8 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n true calc_radius_mm def
+        /inner_radius_mm n 1 sub true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         % Calculate the center of the ring (midpoint between inner and outer radii)
@@ -233,8 +238,8 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n true calc_radius_mm def
+        /inner_radius_mm n 1 sub true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
@@ -280,8 +285,8 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n 1 add calc_radius_mm def
-        /inner_radius_mm n calc_radius_mm def
+        /outer_radius_mm n 1 add true calc_radius_mm def
+        /inner_radius_mm n true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
@@ -320,7 +325,7 @@ gsave
     ( | Zones: ) show
     RINGS str cvs show
     ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm) show
     ( | F/Stop: ) show
     RINGS FOCAL calc_effective_fstop str cvs show
@@ -350,7 +355,7 @@ gsave
     ( | Zones: ) show
     RINGS str cvs show
     ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm) show
     ( | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
@@ -445,8 +450,8 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n true calc_radius_mm def
+        /inner_radius_mm n 1 sub true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         % Calculate the center of the ring (midpoint between inner and outer radii)
@@ -462,8 +467,8 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
+    pagewidth 2 div 50 sub mmToPoints
+    10 mmToPoints
     moveto
     
     % Center align text
@@ -481,7 +486,7 @@ gsave
     (mm | Zones: ) show
     RINGS str cvs show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm | F/Stop: ) show
     RINGS FOCAL calc_effective_fstop str cvs show
 
@@ -516,8 +521,8 @@ gsave
     1 2 RINGS 2 mul {
         /n exch def
         
-        /outer_radius_mm n calc_radius_mm def
-        /inner_radius_mm n 1 sub calc_radius_mm def
+        /outer_radius_mm n true calc_radius_mm def
+        /inner_radius_mm n 1 sub true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
@@ -542,8 +547,8 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
+    pagewidth 2 div 50 sub mmToPoints
+    10 mmToPoints
     moveto
     
     % Center align text
@@ -561,7 +566,7 @@ gsave
     (mm | Zones: ) show
     RINGS str cvs show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
     
@@ -595,9 +600,9 @@ gsave
     
     1 2 RINGS 2 mul {
         /n exch def
-        
-        /outer_radius_mm n 1 add calc_radius_mm def
-        /inner_radius_mm n calc_radius_mm def
+
+        /outer_radius_mm n 1 add true calc_radius_mm def
+        /inner_radius_mm n true calc_radius_mm def
         /annulus_width_mm outer_radius_mm inner_radius_mm sub def
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
@@ -615,8 +620,8 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div mmToPoints
-    20 mmToPoints
+    pagewidth 2 div 50 sub mmToPoints
+    10 mmToPoints
     moveto
     
     % Center align text
@@ -634,7 +639,7 @@ gsave
     (mm | Zones: ) show
     RINGS str cvs show
     ( | Diameter: ) show
-    RINGS 2 mul 1 sub calc_radius_mm 2 mul str cvs show
+    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm | F/Stop: ) show
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
 } def
