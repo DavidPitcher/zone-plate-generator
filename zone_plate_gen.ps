@@ -2,8 +2,6 @@
 %%Title: Zoneplate Generator
 %%Creator: David Pitcher
 %%CreationDate: July 6, 2025
-%%DocumentPaperSizes: Letter
-
 %***********************************************************************
 % Change the following numbers to suit zone plate or sieve
 % ARGUMENTS:
@@ -13,14 +11,14 @@
 /FOCAL 210 def              
 
 % number of opaque rings to generate
-/RINGS 8 def                
+/RINGS 7 def                
 
 % diamter of the punch outline to the out the zone plate
-/PUNCH_DIAMETER 10 def      
+/PUNCH_DIAMETER 20 def      
 
 % change number to whatever magnification you want the
 % printed zone plate to be
-/MAG 15 def                  
+/MAG 1 def                  
 
 % change number to whatever wavelength in mm you want
 % 0.00022 is the wavelength of green light
@@ -32,17 +30,17 @@
 
 % space between sieve holes in mm
 % the greater the magnification, the larger the number should be
-/SIEVE_SPACE 0.46  def       
+/SIEVE_SPACE 0.03 def       
 
 % number of rows of zone plates
 /ROWS 3 def                 
 
 % number of columns of zone plates per row
-/COLS 9 def                 
+/COLS 8 def                 
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (PHOTON) def
+/TYPE (GRID) def
 
 % duplucating camera focal length used
 /DUP_FOCAL 180 def
@@ -51,9 +49,11 @@
 % Constants
 %************************************************************************
 /pi 3.1415926536 def            
-/pagewidth 216 def  
-/pageheight 279 def 
-/totalZonePlateSize 21.5 def    % controls spacing between zone plates
+%/pagewidth 330 def  
+%/pageheight 483 def
+/pagewidth 305 def
+/pageheight 457 def 
+/totalZonePlateSize 33.5 def    % controls spacing between zone plates
 /currentRowIndex 1 def
 %************************************************************************
 
@@ -65,10 +65,15 @@
 /pointsToMm {2.83 div} def                    
 /pointsToMicrons {352.778 mul} def            
 /offsetx {totalZonePlateSize mul mmToPoints} def 
-/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def 
-
-gsave 
+/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def
 %******************************************************************
+
+%************************************************************************
+% Page Setup
+%************************************************************************
+<< /PageSize [pagewidth mmToPoints cvi pageheight mmToPoints cvi] >> setpagedevice
+gsave
+%************************************************************************
 
 %*****************************************************************
 % Calculate the Current Ring Radius
@@ -172,7 +177,7 @@ gsave
     gsave   
     1 mmToPoints setlinewidth                % Set line width
     newpath
-    10 mmToPoints 269 mmToPoints moveto      % Start at (10mm, 269mm)
+    10 mmToPoints pageheight 10 sub mmToPoints moveto      % Start at (10mm, 269mm)
     pagewidth 20 sub mmToPoints 0 rlineto    % Draw to the right
     0 20 pageheight sub mmToPoints rlineto   % Draw down
     20 pagewidth sub mmToPoints 0 rlineto    % Draw left
@@ -471,14 +476,13 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
+    pagewidth 2 div 85 sub mmToPoints
+    50 mmToPoints
     moveto
     
     % Center align text
-    %/Times-Roman findfont
-    /NimbusRoman-Regular findfont
-    12 scalefont
+    /Times-Roman findfont
+    22 scalefont
     setfont
     0 setgray
     
@@ -496,8 +500,8 @@ gsave
     RINGS FOCAL calc_effective_fstop str cvs show
     
     % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
+    pagewidth 2 div 115 sub mmToPoints
+    38 mmToPoints
     moveto
     /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
     /description (Magnification: ) def
@@ -569,13 +573,13 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
+    pagewidth 2 div 85 sub mmToPoints
+    50 mmToPoints
     moveto
     
     % Center align text
     /Times-Roman findfont
-    12 scalefont
+    22 scalefont
     setfont
     0 setgray
     
@@ -593,8 +597,8 @@ gsave
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
     
     % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
+    pagewidth 2 div 115 sub mmToPoints
+    38 mmToPoints
     moveto
     /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
     /description (Magnification: ) def
@@ -658,13 +662,13 @@ gsave
     grestore
     
     % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
+    pagewidth 2 div 85 sub mmToPoints
+    50 mmToPoints
     moveto
     
     % Center align text
     /Times-Roman findfont
-    12 scalefont
+    22 scalefont
     setfont
     0 setgray
     
@@ -682,8 +686,8 @@ gsave
     RINGS FOCAL calc_sieve_effective_fstop str cvs show
     
     % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
+    pagewidth 2 div 115 sub mmToPoints
+    38 mmToPoints
     moveto
     /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
     /description (Magnification: ) def
