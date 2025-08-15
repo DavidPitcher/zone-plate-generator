@@ -35,7 +35,7 @@
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (GRID) def
+/TYPE (PHOTON) def
 
 % duplucating camera focal length used
 /DUP_FOCAL 180 def
@@ -362,15 +362,20 @@ gsave
 /drawZonePlateDescription {
     /colOffset exch def
     /rowOffset exch def
+    /effective_fstop exch def
+    /type exch def
     gsave
-    
+
     colOffset rowOffset moveto
     
     /Times-Roman findfont
-    20 scalefont
+    15 scalefont
     setfont
     0 customgray
     /str 150 string def
+    (Type: ) show
+    type str cvs show
+    ( | Focal Length: ) show
     (Focal Length: ) show
     FOCAL str cvs show
     (mm) show
@@ -380,37 +385,7 @@ gsave
     RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
     (mm) show
     ( | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
-
-    grestore
-} def
-%*****************************************************************
-
-%*****************************************************************
-% Draw Zone Sieve Description
-%*****************************************************************
-/drawZoneSieveDescription {
-    /colOffset exch def
-    /rowOffset exch def
-    gsave
-    
-    colOffset rowOffset moveto
-    
-    /Times-Roman findfont
-    20 scalefont
-    setfont
-    0 customgray
-    /str 150 string def
-    (Focal Length: ) show
-    FOCAL str cvs show
-    (mm) show
-    ( | Zones: ) show
-    RINGS str cvs show
-    ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm) show
-    ( | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+    effective_fstop str cvs show
 
     grestore
 } def
@@ -438,7 +413,11 @@ gsave
     
     %Print zone plate description
     /row_count row_count 1 add def
-    row_count offsety 1 offsetx drawZonePlateDescription
+    (ZonePlate)
+    RINGS FOCAL calc_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Draw grid of Zone Sieves
     1 1 zone_rows {                                    
@@ -453,7 +432,11 @@ gsave
     
     %Print zone plate description
     /row_count row_count 1 add def
-    row_count offsety 1 offsetx drawZoneSieveDescription
+    (ZoneSieve)
+    RINGS FOCAL calc_sieve_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Draw grid of Photo Sieves
     1 1 zone_rows {                                    
@@ -468,7 +451,11 @@ gsave
     
     %Print zone plate description
     /row_count row_count 1 add def
-    row_count offsety 1 offsetx drawZoneSieveDescription
+    (PhotonSieve)
+    RINGS FOCAL calc_sieve_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Return the updated row index
     row_count
@@ -482,7 +469,7 @@ gsave
 /drawCenteredZonePlate {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
+    clippath 1 customgray fill
     0 customgray
     
     % Calculate center position for the zone plate
@@ -571,7 +558,7 @@ gsave
 /drawCenteredZoneSieve {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
+    clippath 1 customgray fill
     0 customgray
     
     % Calculate center position for the zone sieve
@@ -667,7 +654,7 @@ gsave
 /drawCenteredPhotonSieve {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
+    clippath 1 customgray fill
     0 customgray
     
     % Calculate center position for the photon sieve
