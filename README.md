@@ -37,7 +37,7 @@ The script arranges these elements in a grid layout on a Letter-sized page with 
 
 ```powershell
 # Print with default parameters
-gswin64c -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile=zone_plates.pdf zone_plate_gen.ps
+gswin64c -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -dPDFSETTINGS=/printer -sOutputFile=zone_plates.pdf zone_plate_gen.ps
 
 # Convert to a high-resolution image
 gswin64c -dNOPAUSE -dBATCH -sDEVICE=png16m -r600 -sOutputFile=zone_plates.png zone_plate_gen.ps

@@ -2,8 +2,6 @@
 %%Title: Zoneplate Generator
 %%Creator: David Pitcher
 %%CreationDate: July 6, 2025
-%%DocumentPaperSizes: Letter
-
 %***********************************************************************
 % Change the following numbers to suit zone plate or sieve
 % ARGUMENTS:
@@ -13,14 +11,15 @@
 /FOCAL 210 def              
 
 % number of opaque rings to generate
-/RINGS 8 def                
+/RINGS 7 def                
 
 % diamter of the punch outline to the out the zone plate
-/PUNCH_DIAMETER 10 def      
+/PUNCH_DIAMETER 20 def
+/PADDING 10 def 
 
 % change number to whatever magnification you want the
 % printed zone plate to be
-/MAG 15 def                  
+/MAG 1 def                  
 
 % change number to whatever wavelength in mm you want
 % 0.00022 is the wavelength of green light
@@ -32,29 +31,56 @@
 
 % space between sieve holes in mm
 % the greater the magnification, the larger the number should be
-/SIEVE_SPACE 0.46  def       
-
-% number of rows of zone plates
-/ROWS 3 def                 
-
-% number of columns of zone plates per row
-/COLS 9 def                 
+/SIEVE_SPACE 0.04 def       
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (PHOTON) def
+/TYPE (PLATE) def
 
 % duplucating camera focal length used
 /DUP_FOCAL 180 def
 
+/NEGATIVE_MODE false def
 %************************************************************************
 % Constants
 %************************************************************************
 /pi 3.1415926536 def            
-/pagewidth 216 def  
-/pageheight 279 def 
-/totalZonePlateSize 21.5 def    % controls spacing between zone plates
-/currentRowIndex 1 def
+/pagewidth 305 def
+/pageheight 457 def 
+/border_mm 10 def
+/available_width pagewidth border_mm 2 mul sub def
+/available_height pageheight border_mm 2 mul sub def 
+/zoneplate_diameter PUNCH_DIAMETER MAG mul PADDING add def
+/zoneplate_columns available_width zoneplate_diameter div floor cvi def
+/zoneplate_rows 
+    0
+    available_height zoneplate_diameter div 
+    1 sub
+    3 div
+    1 sub
+    floor cvi
+    max
+    3 mul 3 add
+    def
+/column_spacing available_width 
+    zoneplate_columns zoneplate_diameter mul sub 
+    zoneplate_columns 1 add 
+    div def   
+/row_spacing available_height 
+    zoneplate_rows zoneplate_diameter mul sub 
+    zoneplate_rows 1 add 
+    div def 
+%************************************************************************
+
+%************************************************************************
+% Custom gray handler that inverts colors based on mode
+%************************************************************************
+/customgray {
+    NEGATIVE_MODE not {
+        1 exch sub  % Invert the gray value (0→1, 1→0)
+    } if
+    setgray
+} def
 %************************************************************************
 
 %************************************************************************
@@ -64,11 +90,32 @@
 /mmToPoints {2.83 mul} def                    
 /pointsToMm {2.83 div} def                    
 /pointsToMicrons {352.778 mul} def            
-/offsetx {totalZonePlateSize mul mmToPoints} def 
-/offsety {pageheight exch totalZonePlateSize mul sub mmToPoints} def 
-
-gsave 
+/offsetx {
+    column_spacing zoneplate_diameter 2 div add
+    exch 1 sub
+    zoneplate_diameter column_spacing add mul
+    add border_mm add
+    mmToPoints
+} def 
+/offsety {
+    row_spacing zoneplate_diameter 2 div add
+    exch 1 sub
+    zoneplate_diameter row_spacing add mul
+    add border_mm add
+    pageheight exch sub
+    mmToPoints
+} def
 %******************************************************************
+
+%************************************************************************
+% Page Setup
+%************************************************************************
+<< /PageSize [pagewidth mmToPoints cvi pageheight mmToPoints cvi] >> setpagedevice
+clippath
+1 customgray fill
+gsave
+%************************************************************************
+
 
 %*****************************************************************
 % Calculate the Current Ring Radius
@@ -165,14 +212,45 @@ gsave
 } def
 %*****************************************************************
 
+%******************************************************************
+% Concatenate an array of strings into a single string
+% Usage: arrayOfStrings concatStrings → concatenatedString
+%******************************************************************
+/concatStrings {
+    % Array of strings on stack
+    % Returns single concatenated string
+    /strArray exch def
+    /totalLength 0 def
+
+    % Calculate total length needed
+    strArray {
+        %/item exch def
+        %item =
+        length totalLength add /totalLength exch def
+    } forall
+    
+    % Create result string and copy all parts
+    /result totalLength string def
+    /currentPos 0 def
+    
+    strArray {
+        /str exch def
+        result currentPos str putinterval
+        /currentPos currentPos str length add def
+    } forall
+    result
+} def
+%******************************************************************
+
 %*****************************************************************
 % Draw 8" x 10" frame around page
 %*****************************************************************
 /drawBorder {
     gsave   
-    1 mmToPoints setlinewidth                % Set line width
+    1 mmToPoints setlinewidth
+    0 customgray                
     newpath
-    10 mmToPoints 269 mmToPoints moveto      % Start at (10mm, 269mm)
+    10 mmToPoints pageheight 10 sub mmToPoints moveto      % Start at (10mm, 269mm)
     pagewidth 20 sub mmToPoints 0 rlineto    % Draw to the right
     0 20 pageheight sub mmToPoints rlineto   % Draw down
     20 pagewidth sub mmToPoints 0 rlineto    % Draw left
@@ -186,16 +264,16 @@ gsave
 % Draw Zone Plates in Grid Pattern
 %*****************************************************************
 /drawZonePlate {
-    /colIndex exch def
-    /rowIndex exch def
+    /colOffset exch def
+    /rowOffset exch def
 
     gsave
 
     % Translate current position to correct grid position
-    colIndex offsetx rowIndex offsety translate
+    colOffset rowOffset translate
     
     % Draw Punch Outline to cut zone plate from film
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                  
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
@@ -210,9 +288,9 @@ gsave
         % Calculate the center of the ring (midpoint between inner and outer radii)
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
 
-        0 setgray
+        0 customgray
         annulus_width_mm mmToPoints setlinewidth
-        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        0 0 ring_center_radius_mm mmToPoints 0 361 arc
         stroke
         
     } for 
@@ -225,16 +303,16 @@ gsave
 % Draw Zone Sieve in Grid Pattern
 %*****************************************************************
 /drawZoneSieve {
-    /colIndex exch def
-    /rowIndex exch def
+    /colOffset exch def
+    /rowOffset exch def
 
     gsave
 
     % Translate current position to correct grid position
-    colIndex offsetx rowIndex offsety translate
+    colOffset rowOffset translate
     
     % Draw Punch Outline to cut zone plate from film
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                   
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
@@ -248,16 +326,16 @@ gsave
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
         n 1 eq {
-            0 setgray
+            0 customgray
             annulus_width_mm mmToPoints setlinewidth
-            0 0 ring_center_radius_mm mmToPoints 0 360 arc
+            0 0 ring_center_radius_mm mmToPoints 0 361 arc
             stroke 
         } {
             /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
             /angular_spacing 360 num_circles div def
             rand 360 mod rotate  % Rotate by a random angle
             1 1 num_circles {
-               0 setgray
+               0 customgray
                angular_spacing rotate
                ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
             } for
@@ -272,16 +350,16 @@ gsave
 % Draw Photon Sieve in Grid Pattern
 %*****************************************************************
 /drawPhotonSieve {
-    /colIndex exch def
-    /rowIndex exch def
+    /colOffset exch def
+    /rowOffset exch def
 
     gsave
 
     % Translate current position to correct grid position
-    colIndex offsetx rowIndex offsety translate
+    colOffset rowOffset translate
     
     % Draw Punch Outline to cut zone plate from film
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                   
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
@@ -298,7 +376,7 @@ gsave
         /angular_spacing 360 num_circles div def
         rand 360 mod rotate
         1 1 num_circles {
-            0 setgray
+            0 customgray
             angular_spacing rotate
             ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
         } for
@@ -312,57 +390,44 @@ gsave
 % Draw Zone Plate Description
 %*****************************************************************
 /drawZonePlateDescription {
-    /colIndex exch def
-    /rowIndex exch def
+    /colOffset exch def
+    /rowOffset exch def
+    /effective_fstop exch def
+    /type exch def
     gsave
     
-    colIndex offsetx rowIndex offsety moveto
-    
-    /Times-Roman findfont
-    10 scalefont
-    setfont
-    0 setgray
-    /str 150 string def
-    (Focal Length: ) show
-    FOCAL str cvs show
-    (mm) show
-    ( | Zones: ) show
-    RINGS str cvs show
-    ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm) show
-    ( | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
+    /focal_str FOCAL 150 string cvs def
+    /rings_str RINGS 150 string cvs def
+    /zp_diameter_str RINGS 2 mul 1 sub false calc_radius_mm 2 mul 150 string cvs def
+    /fstop_str effective_fstop 150 string cvs def
+ 
+    [
+        (Type: )
+        type 
+        ( | Focal Length: )
+        focal_str
+        (mm | Zones: )
+        rings_str
+        ( | Zone Plate Diameter: )
+        zp_diameter_str
+        (mm | F/Stop: )
+        fstop_str
+    ] concatStrings /fullDescription exch def
 
-    grestore
-} def
-%*****************************************************************
-
-%*****************************************************************
-% Draw Zone Sieve Description
-%*****************************************************************
-/drawZoneSieveDescription {
-    /colIndex exch def
-    /rowIndex exch def
-    gsave
-    
-    colIndex offsetx rowIndex offsety moveto
-    
+    % Calculate string width for centering
     /Times-Roman findfont
-    10 scalefont
+    19 scalefont
     setfont
-    0 setgray
-    /str 150 string def
-    (Focal Length: ) show
-    FOCAL str cvs show
-    (mm) show
-    ( | Zones: ) show
-    RINGS str cvs show
-    ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm) show
-    ( | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
+    /descWidth fullDescription stringwidth pop def
+    
+    % Calculate centered X position
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    rowOffset
+    moveto
+    
+    % Draw the centered string 
+    0 customgray
+    fullDescription show
 
     grestore
 } def
@@ -373,55 +438,137 @@ gsave
 % Usage: rowIndex drawZonePage → updatedRowIndex
 %*****************************************************************
 /drawZonePage {
-    /startRowIndex exch def
-    /currentRowIndex startRowIndex def
-
+    /zone_rows zoneplate_rows 3 div 1 sub def
+    /row_count 0 def
     drawBorder
     
     %Draw grid of Zone Plates
-    0 1 ROWS 1 sub {                                    
+    1 1 zone_rows {                                    
         /row exch def
-        1 1 COLS {                                
+        /row_count row_count 1 add def
+        /rowTrans row_count offsety def
+        1 1 zoneplate_columns {                               
             /col exch def
-            row currentRowIndex add col drawZonePlate                 
+            rowTrans col offsetx drawZonePlate                 
         } for
     } for
-    /currentRowIndex ROWS currentRowIndex add def
     
     %Print zone plate description
-    currentRowIndex 1 drawZonePlateDescription
-    /currentRowIndex 1 currentRowIndex add def
+    /row_count row_count 1 add def
+    (ZonePlate)
+    RINGS FOCAL calc_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Draw grid of Zone Sieves
-    0 1 ROWS 1 sub {                                    
+    1 1 zone_rows {                                    
         /row exch def
-        1 1 COLS {                                
+        /row_count row_count 1 add def
+        /rowTrans row_count offsety def
+        1 1 zoneplate_columns {                               
             /col exch def
-            row currentRowIndex add col drawZoneSieve                 
+            rowTrans col offsetx drawZoneSieve                 
         } for
     } for
-    /currentRowIndex ROWS currentRowIndex add def
     
-    % Print zone sieve description
-    currentRowIndex 1 drawZoneSieveDescription
-    /currentRowIndex 1 currentRowIndex add def
+    %Print zone plate description
+    /row_count row_count 1 add def
+    (ZoneSieve)
+    RINGS FOCAL calc_sieve_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Draw grid of Photo Sieves
-    0 1 ROWS 1 sub {                                    
+    1 1 zone_rows {                                    
         /row exch def
-        1 1 COLS {                                
+        /row_count row_count 1 add def
+        /rowTrans row_count offsety def
+        1 1 zoneplate_columns {                               
             /col exch def
-            row currentRowIndex add col drawPhotonSieve                 
+            rowTrans col offsetx drawPhotonSieve                 
         } for
     } for
-    /currentRowIndex ROWS currentRowIndex add def
     
-    % Print photon sieve description
-    currentRowIndex 1 drawZoneSieveDescription
-    /currentRowIndex 1 currentRowIndex add def
+    %Print zone plate description
+    /row_count row_count 1 add def
+    (PhotonSieve)
+    RINGS FOCAL calc_sieve_effective_fstop
+    row_count offsety 
+    1 offsetx
+    drawZonePlateDescription
     
     % Return the updated row index
-    currentRowIndex
+    row_count
+} def
+%*****************************************************************
+
+
+%*****************************************************************
+% Draw descroption for a sine centered zone plate type
+% Usage: drawCenteredZonePlateDescription
+%*****************************************************************
+/drawCenteredZonePlateDescription { 
+    /type exch def
+    
+    /Times-Roman findfont
+    20 scalefont
+    setfont
+
+    % Position for description - centered at bottom of page
+    /focal_str FOCAL 150 string cvs def
+    /rings_str RINGS 150 string cvs def
+    /zp_diameter_str RINGS 2 mul 1 sub false calc_radius_mm 2 mul 150 string cvs def
+    /fstop_str RINGS FOCAL calc_effective_fstop 150 string cvs def
+ 
+    [
+        (Type: )
+        type
+        ( | Focal Length: )
+        focal_str
+        (mm | Zones: )
+        rings_str
+        ( | Zone Plate Diameter: )
+        zp_diameter_str
+        (mm | F/Stop: )
+        fstop_str
+    ] concatStrings /fullDescription exch def
+    
+    /descWidth fullDescription stringwidth pop def
+    
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    30 mmToPoints
+    moveto
+    0 customgray
+    fullDescription show
+
+    /magnification_str MAG 150 string cvs def
+    /cameraFocal_str DUP_FOCAL 150 string cvs def
+    /cameraDistMm_str MAG DUP_FOCAL DUP_FOCAL MAG div add mul
+        0.5 add cvi 150 string cvs def
+    /cameraDistIn_str MAG DUP_FOCAL DUP_FOCAL MAG div add mul
+        mmToInches 0.5 add cvi 150 string cvs def
+
+    [
+        (Magnification: )
+        magnification_str
+        (x | Camera Focal Length: ) 
+        cameraFocal_str
+        (mm | Camera Distance: )
+        cameraDistMm_str
+        (mm / )
+        cameraDistIn_str
+        (in)
+    ] concatStrings /cameraDescription exch def 
+
+    /descWidth cameraDescription stringwidth pop def
+    
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    20 mmToPoints
+    moveto
+    0 customgray
+    cameraDescription show
 } def
 %*****************************************************************
 
@@ -432,8 +579,8 @@ gsave
 /drawCenteredZonePlate {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
-    0 setgray
+    clippath 1 customgray fill
+    0 customgray
     
     % Calculate center position for the zone plate
     % Center of page is at (pagewidth/2, pageheight/2)
@@ -446,7 +593,7 @@ gsave
     % since we've already positioned at the center
     
     % Draw Punch Outline
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                  
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
@@ -461,57 +608,16 @@ gsave
         % Calculate the center of the ring (midpoint between inner and outer radii)
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
 
-        0 setgray
+        0 customgray
         annulus_width_mm mmToPoints setlinewidth
-        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        0 0 ring_center_radius_mm mmToPoints 0 361 arc
         stroke
     } for
     
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
-    moveto
-    
-    % Center align text
-    %/Times-Roman findfont
-    /NimbusRoman-Regular findfont
-    12 scalefont
-    setfont
-    0 setgray
-    
-    % Create description text
-    /str 150 string def
-    /description (Zone Plate - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
-
+    (Zone Plate) drawCenteredZonePlateDescription
 } def
 %*****************************************************************
 
@@ -522,8 +628,8 @@ gsave
 /drawCenteredZoneSieve {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
-    0 setgray
+    clippath 1 customgray fill
+    0 customgray
     
     % Calculate center position for the zone sieve
     % Center of page is at (pagewidth/2, pageheight/2)
@@ -535,7 +641,7 @@ gsave
     % Use existing drawZoneSieve logic but without the translation
     
     % Draw Punch Outline
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                   
     0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
     stroke
@@ -549,16 +655,16 @@ gsave
 
         /ring_center_radius_mm inner_radius_mm annulus_width_mm 2 div add def
         n 1 eq {
-            0 setgray
+            0 customgray
             annulus_width_mm mmToPoints setlinewidth
-            0 0 ring_center_radius_mm mmToPoints 0 360 arc
+            0 0 ring_center_radius_mm mmToPoints 0 361 arc
             stroke 
         } {
             /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
             /angular_spacing 360 num_circles div def
             rand 360 mod rotate  % Rotate by a random angle
             1 1 num_circles {
-               0 setgray
+               0 customgray
                angular_spacing rotate
                ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
             } for
@@ -568,46 +674,8 @@ gsave
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
-    moveto
-    
-    % Center align text
-    /Times-Roman findfont
-    12 scalefont
-    setfont
-    0 setgray
-    
-    % Create description text
-    /str 150 string def
-    /description (Zone Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
+    (Zone Sieve) drawCenteredZonePlateDescription
+
 } def
 %*****************************************************************
 
@@ -618,8 +686,8 @@ gsave
 /drawCenteredPhotonSieve {
     gsave
     % Clear any existing drawing
-    clippath 1 setgray fill
-    0 setgray
+    clippath 1 customgray fill
+    0 customgray
     
     % Calculate center position for the photon sieve
     % Center of page is at (pagewidth/2, pageheight/2)
@@ -631,9 +699,9 @@ gsave
     % Use existing drawPhotonSieve logic but without the translation
     
     % Draw Punch Outline
-    0 setgray                                  
+    0 customgray                                  
     .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 361 arc 
     stroke
     
     1 2 RINGS 2 mul {
@@ -648,7 +716,7 @@ gsave
         /angular_spacing 360 num_circles div def
         rand 360 mod rotate
         1 1 num_circles {
-            0 setgray
+            0 customgray
             angular_spacing rotate
             ring_center_radius_mm mmToPoints 0 annulus_width_mm SIEVE_SCALE mul 2 div mmToPoints 0 360 arc fill
         } for
@@ -657,84 +725,7 @@ gsave
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 50 sub mmToPoints
-    15 mmToPoints
-    moveto
-    
-    % Center align text
-    /Times-Roman findfont
-    12 scalefont
-    setfont
-    0 setgray
-    
-    % Create description text
-    /str 150 string def
-    /description (Photon Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 65 sub mmToPoints
-    10 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
-} def
-%*****************************************************************
-
-%*****************************************************************
-% Draw a Single Optical Element Centered on the Page
-% Usage: elementType drawCenteredElement → -
-% elementType: 1 = Zone Plate, 2 = Zone Sieve, 3 = Photon Sieve
-%*****************************************************************
-/drawCenteredElement {
-    /elementType exch def
-    
-    % Clear any previous page content
-    clippath 1 setgray fill
-    0 setgray
-    
-    % Select the appropriate drawing function based on elementType
-    elementType 1 eq {
-        % Draw Zone Plate
-        drawCenteredZonePlate
-    } {
-        elementType 2 eq {
-            % Draw Zone Sieve
-            drawCenteredZoneSieve
-        } {
-            elementType 3 eq {
-                % Draw Photon Sieve
-                drawCenteredPhotonSieve
-            } {
-                % Invalid element type - display error
-                /Times-Bold findfont 14 scalefont setfont
-                pagewidth 2 div mmToPoints pageheight 2 div mmToPoints moveto
-                (Error: Invalid element type) stringwidth pop 2 div neg 0 rmoveto
-                (Error: Invalid element type) show
-            } ifelse
-        } ifelse
-    } ifelse
-    
-    showpage
+    (Photon Sieve) drawCenteredZonePlateDescription
 } def
 %*****************************************************************
 
@@ -745,20 +736,23 @@ gsave
     % Check the TYPE variable and execute appropriate drawing
     TYPE (GRID) eq {
         % Draw grid of all elements
-        currentRowIndex drawZonePage /currentRowIndex exch def
+        drawZonePage 
         showpage
     } {
         TYPE (PLATE) eq {
             % Draw centered Zone Plate
-            1 drawCenteredElement
+            %1 drawCenteredElement
+            drawCenteredZonePlate
         } {
             TYPE (SIEVE) eq {
                 % Draw centered Zone Sieve
-                2 drawCenteredElement
+                %2 drawCenteredElement
+                drawCenteredZoneSieve
             } {
                 TYPE (PHOTON) eq {
                     % Draw centered Photon Sieve
-                    3 drawCenteredElement
+                    %3 drawCenteredElement
+                    drawCenteredPhotonSieve
                 } {
                     % Invalid TYPE - display error and show grid as default
                     /Times-Bold findfont 14 scalefont setfont
