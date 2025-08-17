@@ -15,7 +15,7 @@
 
 % diamter of the punch outline to the out the zone plate
 /PUNCH_DIAMETER 20 def
-/PADDING 20 def 
+/PADDING 10 def 
 
 % change number to whatever magnification you want the
 % printed zone plate to be
@@ -31,11 +31,11 @@
 
 % space between sieve holes in mm
 % the greater the magnification, the larger the number should be
-/SIEVE_SPACE 0.03 def       
+/SIEVE_SPACE 0.04 def       
 
 % type of zone plate to generate
 % valid values are GRID, PLATE, SIEVE, PHOTON
-/TYPE (PHOTON) def
+/TYPE (PLATE) def
 
 % duplucating camera focal length used
 /DUP_FOCAL 180 def
@@ -212,6 +212,36 @@ gsave
 } def
 %*****************************************************************
 
+%******************************************************************
+% Concatenate an array of strings into a single string
+% Usage: arrayOfStrings concatStrings → concatenatedString
+%******************************************************************
+/concatStrings {
+    % Array of strings on stack
+    % Returns single concatenated string
+    /strArray exch def
+    /totalLength 0 def
+
+    % Calculate total length needed
+    strArray {
+        %/item exch def
+        %item =
+        length totalLength add /totalLength exch def
+    } forall
+    
+    % Create result string and copy all parts
+    /result totalLength string def
+    /currentPos 0 def
+    
+    strArray {
+        /str exch def
+        result currentPos str putinterval
+        /currentPos currentPos str length add def
+    } forall
+    result
+} def
+%******************************************************************
+
 %*****************************************************************
 % Draw 8" x 10" frame around page
 %*****************************************************************
@@ -260,7 +290,7 @@ gsave
 
         0 customgray
         annulus_width_mm mmToPoints setlinewidth
-        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        0 0 ring_center_radius_mm mmToPoints 0 361 arc
         stroke
         
     } for 
@@ -298,7 +328,7 @@ gsave
         n 1 eq {
             0 customgray
             annulus_width_mm mmToPoints setlinewidth
-            0 0 ring_center_radius_mm mmToPoints 0 360 arc
+            0 0 ring_center_radius_mm mmToPoints 0 361 arc
             stroke 
         } {
             /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
@@ -365,27 +395,39 @@ gsave
     /effective_fstop exch def
     /type exch def
     gsave
-
-    colOffset rowOffset moveto
     
+    /focal_str FOCAL 150 string cvs def
+    /rings_str RINGS 150 string cvs def
+    /zp_diameter_str RINGS 2 mul 1 sub false calc_radius_mm 2 mul 150 string cvs def
+    /fstop_str effective_fstop 150 string cvs def
+ 
+    [
+        (Type: )
+        type 
+        ( | Focal Length: )
+        focal_str
+        (mm | Zones: )
+        rings_str
+        ( | Zone Plate Diameter: )
+        zp_diameter_str
+        (mm | F/Stop: )
+        fstop_str
+    ] concatStrings /fullDescription exch def
+
+    % Calculate string width for centering
     /Times-Roman findfont
-    15 scalefont
+    19 scalefont
     setfont
+    /descWidth fullDescription stringwidth pop def
+    
+    % Calculate centered X position
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    rowOffset
+    moveto
+    
+    % Draw the centered string 
     0 customgray
-    /str 150 string def
-    (Type: ) show
-    type str cvs show
-    ( | Focal Length: ) show
-    (Focal Length: ) show
-    FOCAL str cvs show
-    (mm) show
-    ( | Zones: ) show
-    RINGS str cvs show
-    ( | Zone Plate Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm) show
-    ( | F/Stop: ) show
-    effective_fstop str cvs show
+    fullDescription show
 
     grestore
 } def
@@ -462,6 +504,74 @@ gsave
 } def
 %*****************************************************************
 
+
+%*****************************************************************
+% Draw descroption for a sine centered zone plate type
+% Usage: drawCenteredZonePlateDescription
+%*****************************************************************
+/drawCenteredZonePlateDescription { 
+    /type exch def
+    
+    /Times-Roman findfont
+    20 scalefont
+    setfont
+
+    % Position for description - centered at bottom of page
+    /focal_str FOCAL 150 string cvs def
+    /rings_str RINGS 150 string cvs def
+    /zp_diameter_str RINGS 2 mul 1 sub false calc_radius_mm 2 mul 150 string cvs def
+    /fstop_str RINGS FOCAL calc_effective_fstop 150 string cvs def
+ 
+    [
+        (Type: )
+        type
+        ( | Focal Length: )
+        focal_str
+        (mm | Zones: )
+        rings_str
+        ( | Zone Plate Diameter: )
+        zp_diameter_str
+        (mm | F/Stop: )
+        fstop_str
+    ] concatStrings /fullDescription exch def
+    
+    /descWidth fullDescription stringwidth pop def
+    
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    30 mmToPoints
+    moveto
+    0 customgray
+    fullDescription show
+
+    /magnification_str MAG 150 string cvs def
+    /cameraFocal_str DUP_FOCAL 150 string cvs def
+    /cameraDistMm_str MAG DUP_FOCAL DUP_FOCAL MAG div add mul
+        0.5 add cvi 150 string cvs def
+    /cameraDistIn_str MAG DUP_FOCAL DUP_FOCAL MAG div add mul
+        mmToInches 0.5 add cvi 150 string cvs def
+
+    [
+        (Magnification: )
+        magnification_str
+        (x | Camera Focal Length: ) 
+        cameraFocal_str
+        (mm | Camera Distance: )
+        cameraDistMm_str
+        (mm / )
+        cameraDistIn_str
+        (in)
+    ] concatStrings /cameraDescription exch def 
+
+    /descWidth cameraDescription stringwidth pop def
+    
+    pagewidth mmToPoints 2 div descWidth 2 div sub
+    20 mmToPoints
+    moveto
+    0 customgray
+    cameraDescription show
+} def
+%*****************************************************************
+
 %*****************************************************************
 % Draw a Single Zone Plate Centered on the Page
 % Usage: drawCenteredZonePlate → -
@@ -500,54 +610,14 @@ gsave
 
         0 customgray
         annulus_width_mm mmToPoints setlinewidth
-        0 0 ring_center_radius_mm mmToPoints 0 360 arc
+        0 0 ring_center_radius_mm mmToPoints 0 361 arc
         stroke
     } for
     
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 85 sub mmToPoints
-    50 mmToPoints
-    moveto
-    
-    % Center align text
-    /Times-Roman findfont
-    22 scalefont
-    setfont
-    0 customgray
-    
-    % Create description text
-    /str 150 string def
-    /description (Zone Plate - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 115 sub mmToPoints
-    38 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
-
+    (Zone Plate) drawCenteredZonePlateDescription
 } def
 %*****************************************************************
 
@@ -587,7 +657,7 @@ gsave
         n 1 eq {
             0 customgray
             annulus_width_mm mmToPoints setlinewidth
-            0 0 ring_center_radius_mm mmToPoints 0 360 arc
+            0 0 ring_center_radius_mm mmToPoints 0 361 arc
             stroke 
         } {
             /num_circles annulus_width_mm SIEVE_SCALE mul ring_center_radius_mm calc_num_circles def
@@ -604,46 +674,8 @@ gsave
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 85 sub mmToPoints
-    50 mmToPoints
-    moveto
-    
-    % Center align text
-    /Times-Roman findfont
-    22 scalefont
-    setfont
-    0 customgray
+    (Zone Sieve) drawCenteredZonePlateDescription
 
-    % Create description text
-    /str 150 string def
-    /description (Zone Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 115 sub mmToPoints
-    38 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
 } def
 %*****************************************************************
 
@@ -669,7 +701,7 @@ gsave
     % Draw Punch Outline
     0 customgray                                  
     .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 361 arc 
     stroke
     
     1 2 RINGS 2 mul {
@@ -693,84 +725,7 @@ gsave
     % Draw description at the bottom of the page
     grestore
     
-    % Position for description - centered at bottom of page
-    pagewidth 2 div 85 sub mmToPoints
-    50 mmToPoints
-    moveto
-    
-    % Center align text
-    /Times-Roman findfont
-    22 scalefont
-    setfont
-    0 customgray
-    
-    % Create description text
-    /str 150 string def
-    /description (Photon Sieve - Focal Length: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    FOCAL str cvs show
-    (mm | Zones: ) show
-    RINGS str cvs show
-    ( | Diameter: ) show
-    RINGS 2 mul 1 sub false calc_radius_mm 2 mul str cvs show
-    (mm | F/Stop: ) show
-    RINGS FOCAL calc_sieve_effective_fstop str cvs show
-    
-    % Add camera positioning information on a second line
-    pagewidth 2 div 115 sub mmToPoints
-    38 mmToPoints
-    moveto
-    /cameraDist MAG DUP_FOCAL DUP_FOCAL MAG div add mul def
-    /description (Magnification: ) def
-    description stringwidth pop 2 div neg 0 rmoveto
-    description show
-    MAG str cvs show
-    (x | Camera Focal Length: ) show
-    DUP_FOCAL str cvs show
-    (mm | Camera Distance: ) show
-    cameraDist 0.5 add cvi str cvs show
-    (mm / ) show
-    cameraDist mmToInches 0.5 add cvi str cvs show
-    (in) show
-} def
-%*****************************************************************
-
-%*****************************************************************
-% Draw a Single Optical Element Centered on the Page
-% Usage: elementType drawCenteredElement → -
-% elementType: 1 = Zone Plate, 2 = Zone Sieve, 3 = Photon Sieve
-%*****************************************************************
-/drawCenteredElement {
-    /elementType exch def
-    
-    % Clear any previous page content
-    clippath 1 setgray fill
-    0 setgray
-    
-    % Select the appropriate drawing function based on elementType
-    elementType 1 eq {
-        % Draw Zone Plate
-        drawCenteredZonePlate
-    } {
-        elementType 2 eq {
-            % Draw Zone Sieve
-            drawCenteredZoneSieve
-        } {
-            elementType 3 eq {
-                % Draw Photon Sieve
-                drawCenteredPhotonSieve
-            } {
-                % Invalid element type - display error
-                /Times-Bold findfont 14 scalefont setfont
-                pagewidth 2 div mmToPoints pageheight 2 div mmToPoints moveto
-                (Error: Invalid element type) stringwidth pop 2 div neg 0 rmoveto
-                (Error: Invalid element type) show
-            } ifelse
-        } ifelse
-    } ifelse
-    
-    showpage
+    (Photon Sieve) drawCenteredZonePlateDescription
 } def
 %*****************************************************************
 
@@ -786,15 +741,18 @@ gsave
     } {
         TYPE (PLATE) eq {
             % Draw centered Zone Plate
-            1 drawCenteredElement
+            %1 drawCenteredElement
+            drawCenteredZonePlate
         } {
             TYPE (SIEVE) eq {
                 % Draw centered Zone Sieve
-                2 drawCenteredElement
+                %2 drawCenteredElement
+                drawCenteredZoneSieve
             } {
                 TYPE (PHOTON) eq {
                     % Draw centered Photon Sieve
-                    3 drawCenteredElement
+                    %3 drawCenteredElement
+                    drawCenteredPhotonSieve
                 } {
                     % Invalid TYPE - display error and show grid as default
                     /Times-Bold findfont 14 scalefont setfont
