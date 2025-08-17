@@ -418,3 +418,64 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Poetry
+poetry.lock
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Output files
+output/
+*.ps
+*.png
+*.tiff
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Documentation
+docs/_build/
+
+# Docker
+.dockerignore
+
+# Azure
+.azure/

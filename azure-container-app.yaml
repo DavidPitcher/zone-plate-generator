@@ -1,0 +1,41 @@
+apiVersion: 2022-03-01
+location: eastus
+resourceGroupName: zone-plate-generator-rg
+containerAppsEnvironmentName: zone-plate-env
+containerAppName: zone-plate-generator
+image: your-registry.azurecr.io/zone-plate-generator:latest
+
+environment:
+  - name: FLASK_ENV
+    value: "production"
+  - name: PORT
+    value: "8000"
+  - name: DEBUG
+    value: "false"
+
+resources:
+  cpu: 0.5
+  memory: 1Gi
+
+ingress:
+  external: true
+  targetPort: 8000
+  traffic:
+    - weight: 100
+      latestRevision: true
+
+secrets:
+  - name: secret-key
+    value: "your-secret-key-here"
+
+dapr:
+  enabled: false
+
+scale:
+  minReplicas: 1
+  maxReplicas: 10
+  rules:
+    - name: http-rule
+      http:
+        metadata:
+          concurrentRequests: "100"

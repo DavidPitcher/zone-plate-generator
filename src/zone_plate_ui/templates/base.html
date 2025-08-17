@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ current_theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Zone Plate Generator{% endblock %}</title>
+    
+    <!-- CSS Variables for theming -->
+    <style>
+        :root[data-theme="{{ current_theme }}"] {
+            --primary-color: {{ theme_config.primary }};
+            --secondary-color: {{ theme_config.secondary }};
+            --success-color: {{ theme_config.success }};
+            --danger-color: {{ theme_config.danger }};
+            --warning-color: {{ theme_config.warning }};
+            --info-color: {{ theme_config.info }};
+            --background-color: {{ theme_config.background }};
+            --surface-color: {{ theme_config.surface }};
+            --text-color: {{ theme_config.text }};
+        }
+    </style>
+    
+    <!-- Custom CSS (no external dependencies) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body data-theme="{{ current_theme }}">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <span class="icon-dot"></span>
+                Zone Plate Generator
+            </a>
+            
+            <!-- Pure CSS hamburger menu -->
+            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation">
+            <label for="nav-toggle" class="nav-toggle-label">
+                <span class="hamburger"></span>
+            </label>
+            
+            <div class="nav-menu">
+                <!-- Theme selection form -->
+                <form method="post" action="{{ url_for('set_theme') }}" class="theme-form">
+                    <label for="theme-select" class="theme-label">Theme:</label>
+                    <select id="theme-select" name="theme" class="theme-select" onchange="this.form.submit()">
+                        {% for theme_key, theme_data in themes.items() %}
+                        <option value="{{ theme_key }}" {% if theme_key == current_theme %}selected{% endif %}>
+                            {{ theme_data.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <noscript>
+                        <button type="submit" class="btn btn-small">Apply</button>
+                    </noscript>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }}">
+                        {{ message }}
+                        <input type="checkbox" class="alert-close-checkbox" id="alert-close-{{ loop.index }}">
+                        <label for="alert-close-{{ loop.index }}" class="alert-close">&times;</label>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h6>Zone Plate Generator</h6>
+                    <p class="footer-text">
+                        Generate Fresnel zone plates, zone sieves, and photon sieves using PostScript and Ghostscript.
+                    </p>
+                </div>
+                <div class="footer-section footer-right">
+                    <p class="footer-text">
+                        Built with Python, Flask, and CSS<br>
+                        <a href="#" class="footer-link">View on GitHub</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

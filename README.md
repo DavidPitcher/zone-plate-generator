@@ -1,95 +1,191 @@
 # Zone Plate Generator
 
-A PostScript generator for creating zone plates, zone sieves, and photon sieves for photography and optical experiments.
+A modern Python web application for generating Fresnel zone plates, zone sieves, and photon sieves using PostScript and Ghostscript. Features a responsive HTML5/CSS interface with theme support and containerized deployment for Azure Container Apps.
 
-## Overview
+![Zone Plate Generator](https://img.shields.io/badge/Python-3.11+-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)
+![Docker](https://img.shields.io/badge/Docker-Supported-blue.svg)
+![Azure](https://img.shields.io/badge/Azure%20Container%20Apps-Ready-orange.svg)
 
-This PostScript program generates three types of diffractive optical elements on a single page:
+## Features
+
+- **Modern Web Interface**: Responsive HTML5/CSS design with Bootstrap 5
+- **Theme Support**: Multiple color themes (Light, Dark, Ocean Blue, Purple Haze)
+- **Zone Plate Types**: Support for Zone Plates, Zone Sieves, Photon Sieves, and Grid layouts
+- **Multiple Output Formats**: PNG, TIFF, and PDF generation
+- **Real-time Validation**: Client-side form validation with helpful tooltips
+- **Containerized**: Docker support with multi-stage builds
+- **Azure Ready**: Optimized for Azure Container Apps deployment
+- **Poetry Management**: Modern Python dependency management
+- **Accessibility**: WCAG compliant with keyboard navigation support
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- Poetry
+- Ghostscript
+- Docker (for containerized deployment)
+
+### Local Development
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/DavidPitcher/zone-plate-generator.git
+   cd zone-plate-generator
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   poetry install
+   ```
+
+3. **Set up environment**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+4. **Run the application**:
+   ```bash
+   poetry run python src/zone_plate_ui/app.py
+   ```
+
+5. **Open your browser**:
+   Navigate to `http://localhost:8000`
+
+### Docker Deployment
+
+1. **Build the image**:
+   ```bash
+   docker build -t zone-plate-generator .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run -p 8000:8000 zone-plate-generator
+   ```
+
+### Azure Container Apps Deployment
+
+#### Using PowerShell (Windows)
+
+1. **Run the deployment script**:
+   ```powershell
+   .\deploy-azure.ps1
+   ```
+
+#### Using Bash (Linux/Mac)
+
+1. **Make the deployment script executable**:
+   ```bash
+   chmod +x deploy-azure.sh
+   ```
+
+2. **Run the deployment**:
+   ```bash
+   ./deploy-azure.sh
+   ```
+
+## PostScript Generator
+
+The underlying PostScript engine generates three types of diffractive optical elements:
 
 1. **Zone Plates**: Concentric rings of alternating transparent and opaque zones that focus light
 2. **Zone Sieves**: Similar to zone plates but with rings formed by discrete holes
 3. **Photon Sieves**: A variant with holes in the transparent zones
 
-The script arranges these elements in a grid layout on a Letter-sized page with descriptive text for each type or a single type centered on the page
+## Web Interface Features
 
-## Features
+### Parameters
 
-- Generates zone plates based on configurable focal length and desired number of zones
-- Calculates proper zone spacing based on optical formulas
-- Creates multiple elements in a grid pattern with specified rows and columns
-- Automatically calculates effective f-stop values for each element type
-- Includes punch outline markers for cutting the elements out after printing
-- Displays measurements in both metric (mm) and imperial (inches) units
-- Shows camera positioning information for duplication work
-- Supports four display modes: grid view of all elements or individual centered plates
-- Outputs ready-to-print PostScript file
+The web interface supports the following parameters:
 
-## Usage
+#### Basic Parameters
+- **Focal Length** (mm): The focal length of the zone plate (1-10000)
+- **Number of Rings**: Number of opaque rings to generate (1-50)
+- **Wavelength** (mm): Wavelength of light (0.00022 for green, 0.00056 for daylight)
+- **Zone Plate Type**: GRID (all types), PLATE (zone plate), SIEVE (zone sieve), PHOTON (photon sieve)
 
-### Basic Usage
+#### Physical Parameters
+- **Punch Diameter** (mm): Diameter of the punch outline to cut the zone plate
+- **Magnification**: Magnification factor for the printed zone plate
+- **Padding** (mm): Padding around the zone plate
+- **Output Format**: PNG, TIFF, or PDF
 
-1. Download the `zone_plate_gen.ps` file
-2. Edit the parameters at the top of the file as needed (see Parameters section)
-3. Print the file to a PostScript-compatible printer or use a PostScript viewer
-4. For best results, print on high-resolution transparent film
+#### Advanced Parameters
+- **Sieve Scale Factor**: Scale factor for sieve holes on a ring
+- **Sieve Spacing** (mm): Space between sieve holes
+- **Camera Focal Length** (mm): Duplicating camera focal length
+- **Negative Mode**: Invert colors for negative film processing
 
-### Printing with Ghostscript
+### Quick Presets
 
-```powershell
-# Print with default parameters
-gswin64c -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -dPDFSETTINGS=/printer -sOutputFile=zone_plates.pdf zone_plate_gen.ps
+The interface includes preset configurations for common use cases:
 
-# Convert to a high-resolution image
-gswin64c -dNOPAUSE -dBATCH -sDEVICE=png16m -r600 -sOutputFile=zone_plates.png zone_plate_gen.ps
-```
+- **Photography**: Standard settings for photographic applications
+- **Solar Observation**: Optimized for solar photography
+- **Microscopy**: Settings for microscopy applications
 
-## Parameters
+### Output Formats
 
-The script has several configurable parameters at the top:
+- **PNG**: Best for digital viewing and web display
+- **TIFF**: High quality for printing and professional use
+- **PDF**: Vector format, infinitely scalable
+
+## Development
+
+### Setting Up Development Environment
+
+1. **Install Poetry**:
+   ```bash
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+2. **Setup development environment**:
+   ```bash
+   python dev.py setup
+   ```
+
+3. **Run the application**:
+   ```bash
+   python dev.py run
+   ```
+
+4. **Run tests**:
+   ```bash
+   python dev.py test
+   ```
+
+### Available Commands
+
+- `python dev.py setup` - Setup development environment
+- `python dev.py run` - Run the Flask application
+- `python dev.py test` - Run test suite
+- `python dev.py format` - Format code with Black
+- `python dev.py lint` - Lint code with flake8
+- `python dev.py typecheck` - Type check with mypy
+- `python dev.py check` - Run all quality checks
+- `python dev.py docker-build` - Build Docker image
+- `python dev.py docker-run` - Run Docker container
+- `python dev.py clean` - Clean up generated files
+
+## Original PostScript Parameters
+
+The underlying PostScript generator has these configurable parameters:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | FOCAL | 210 | Focal length in millimeters |
-| RINGS | 8 | Number of zones (total rings will be RINGS × 2) |
-| PUNCH_DIAMETER | 10 | Diameter of the punch outline in mm to cut out the zone plate |
-| MAG | 15 | Magnification factor for the printed zone plate |
+| RINGS | 7 | Number of zones (total rings will be RINGS × 2) |
+| PUNCH_DIAMETER | 20 | Diameter of the punch outline in mm to cut out the zone plate |
+| MAG | 1 | Magnification factor for the printed zone plate |
 | WAVE_LENGTH | 0.00056 | Design wavelength in mm (0.00056 = daylight, 0.00022 = green light) |
 | SIEVE_SCALE | 1.5 | Scale factor for the sieve holes on a ring |
-| SIEVE_SPACE | 0.46 | Space between sieve holes in mm (larger values needed for higher magnification) |
-| ROWS | 3 | Number of rows per element type |
-| COLS | 9 | Number of columns per row |
-| TYPE | PHOTON | Type of zone plate to generate (valid values: GRID, PLATE, SIEVE, PHOTON) |
-| DUP_FOCAL | 180 | Duplicating camera focal length in millimeters (used for camera positioning info) |
-
-## Example Configurations
-
-### Standard Zone Plate for Visible Light
-
-```postscript
-/FOCAL 200 def        % 200mm focal length
-/RINGS 8 def          % 8 zones (16 rings)
-MAG 1 def            % 1:1 scale
-/WAVE_LENGTH 0.00056 def  % Daylight
-```
-
-### Telephoto Zone Plate
-
-```postscript
-/FOCAL 500 def        % 500mm focal length
-/RINGS 12 def         % 12 zones (24 rings)
-MAG 1.5 def          % 1.5× magnification
-/WAVE_LENGTH 0.00056 def  % Daylight
-```
-
-### Wide-Angle Zone Sieve
-
-```postscript
-/FOCAL 35 def         % 35mm focal length
-/RINGS 5 def          % 5 zones
-/SIEVE_SCALE 2.0 def  % Larger holes
-/SIEVE_SPACE 0.25 def % Spacing between holes
-/TYPE (SIEVE) def     % Generate a single zone sieve
-```
+| SIEVE_SPACE | 0.04 | Space between sieve holes in mm |
+| TYPE | PLATE | Type of zone plate to generate (valid values: GRID, PLATE, SIEVE, PHOTON) |
+| DUP_FOCAL | 180 | Duplicating camera focal length in millimeters |
 
 ## Optical Principles
 
@@ -108,35 +204,43 @@ Where:
 
 The effective f-stop is calculated based on the diameter and focal length.
 
-## Camera Positioning Information
+## Architecture
 
-When generating a single centered element (using TYPE set to PLATE, SIEVE, or PHOTON), the script displays helpful information for positioning a duplication camera:
+### Project Structure
 
-- **Magnification**: Shows the current MAG value
-- **Camera Focal Length**: Shows the DUP_FOCAL value (camera lens focal length)
-- **Camera Distance**: Calculated distance for proper positioning using the formula:
-  ```
-  Distance = Magnification × (Focal Length + Focal Length / Magnification)
-  ```
+```
+zone-plate-generator/
+├── src/
+│   └── zone_plate_ui/
+│       ├── __init__.py
+│       ├── app.py              # Main Flask application
+│       ├── templates/          # Jinja2 templates
+│       │   ├── base.html       # Base template with theming
+│       │   ├── index.html      # Main interface
+│       │   └── error.html      # Error pages
+│       └── static/             # Static web assets
+│           └── css/
+│               └── style.css   # Pure CSS styles and themes
+├── postscript/
+│   └── zone_plate_gen.ps       # Original PostScript generator
+├── output/                     # Generated files (created at runtime)
+├── Dockerfile                  # Multi-stage Docker build
+├── pyproject.toml              # Poetry configuration
+├── azure-container-app.yaml    # Azure Container Apps config
+├── deploy-azure.sh             # Linux/Mac deployment script
+├── deploy-azure.ps1            # Windows deployment script
+└── README.md
+```
 
-This information is shown in both millimeters and inches for convenience. Proper camera positioning is critical when duplicating zone plates onto film or other media.
+### Technology Stack
 
-## Understanding the Output
-
-The generator has four display modes controlled by the TYPE parameter:
-
-1. **GRID**: Displays a full page with multiple elements arranged in a grid pattern:
-   - A border frame (8" × 10")
-   - Three grids of optical elements (Zone Plates, Zone Sieves, Photon Sieves)
-   - Text descriptions with calculated parameters below each grid
-
-2. **PLATE**: Displays a single Zone Plate centered on the page with description and camera positioning information
-
-3. **SIEVE**: Displays a single Zone Sieve centered on the page with description and camera positioning information
-
-4. **PHOTON**: Displays a single Photon Sieve centered on the page with description and camera positioning information
-
-Each optical element has a circular outline for cutting, and the pattern will focus light when printed on transparent media and used with a camera.
+- **Backend**: Python 3.11, Flask 3.0
+- **Frontend**: HTML5, CSS3 (Pure CSS implementation, no JavaScript)
+- **Image Processing**: Ghostscript
+- **Dependency Management**: Poetry
+- **Containerization**: Docker with multi-stage builds
+- **Deployment**: Azure Container Apps
+- **Security**: CSP headers, input validation, secure file handling
 
 ## Tips for Best Results
 
@@ -146,44 +250,27 @@ Each optical element has a circular outline for cutting, and the pattern will fo
 - For testing: use a laser pointer or bright point light source to observe focusing
 - Experiment with different focal lengths to find the best for your needs
 - When duplicating, use the camera positioning information for precise results
-- All measurements are displayed in both metric (mm) and imperial (inches) units for convenience
 
-## Mathematical References
+## Contributing
 
-The program includes utilities for calculating:
-- Zone radii based on optical formulas
-- Number of holes needed in each ring for zone sieves
-- Effective f-stop for both zone plates and zone sieves
-- Camera positioning distance for duplication work
-
-Key formulas used:
-
-1. **Zone radius calculation**:
-   ```
-   r_n = sqrt(n * λ * f + (n² * λ²) / 4) * MAG
-   ```
-   Where:
-   - r_n = radius of zone n
-   - n = zone number
-   - λ = wavelength of light
-   - f = focal length
-   - MAG = magnification factor
-
-2. **Camera distance calculation**:
-   ```
-   Distance = MAG * (DUP_FOCAL + DUP_FOCAL / MAG)
-   ```
-   Where:
-   - MAG = magnification factor
-   - DUP_FOCAL = duplicating camera lens focal length
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Make changes and add tests
+4. Run the test suite: `python dev.py test`
+5. Submit a pull request
 
 ## License
 
-See the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Attribution
+## Acknowledgments
 
-The PostScript concepts and original ideas for this generator were inspired by the work of Guillermo Peñate.
+- Original PostScript zone plate generator by David Pitcher
+- PostScript concepts inspired by the work of Guillermo Peñate
+- Bootstrap team for the UI framework
+- Ghostscript developers for image processing capabilities
+- Flask community for the web framework
+
 For additional details and background on zone plates and sieves, see:
 - [Zone Plate and Sieves by Guillermo Peñate](https://pinholeday.org/docs/Zone_Plate_and_Sieves/)
 

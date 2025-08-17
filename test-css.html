@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zone Plate Generator - Pure CSS Test</title>
+    <link rel="stylesheet" href="src/zone_plate_ui/static/css/style.css">
+</head>
+<body data-theme="light">
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <span class="icon-dot"></span>
+                Zone Plate Generator
+            </a>
+            
+            <input type="checkbox" id="nav-toggle" class="nav-toggle">
+            <label for="nav-toggle" class="nav-toggle-label">
+                <span class="hamburger"></span>
+            </label>
+            
+            <div class="nav-menu">
+                <form class="theme-form">
+                    <label for="theme-select" class="theme-label">Theme:</label>
+                    <select id="theme-select" name="theme" class="theme-select">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="blue">Ocean Blue</option>
+                        <option value="purple">Purple Haze</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">Zone Plate Generator</h1>
+            <p class="page-subtitle">Pure CSS Implementation Test</p>
+        </div>
+
+        <div class="layout-grid">
+            <div class="form-container">
+                <form class="zone-form">
+                    <fieldset class="form-section">
+                        <legend>Zone Plate Type</legend>
+                        <div class="radio-grid">
+                            <div class="radio-card">
+                                <input type="radio" id="type_plate" name="type" value="PLATE" checked>
+                                <label for="type_plate" class="radio-label">
+                                    <span class="radio-visual"></span>
+                                    <div class="radio-content">
+                                        <strong class="radio-title">Plate</strong>
+                                        <small class="radio-description">Classic Fresnel zone plate</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="radio-card">
+                                <input type="radio" id="type_sieve" name="type" value="SIEVE">
+                                <label for="type_sieve" class="radio-label">
+                                    <span class="radio-visual"></span>
+                                    <div class="radio-content">
+                                        <strong class="radio-title">Sieve</strong>
+                                        <small class="radio-description">Perforated zone plate</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="form-section">
+                        <legend>Parameters</legend>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="focal_length" class="form-label">
+                                    Focal Length (mm)
+                                    <span class="help-icon" title="The focal length in millimeters">?</span>
+                                </label>
+                                <input type="number" id="focal_length" name="focal_length" 
+                                       value="210" class="form-control" required>
+                                <small class="form-help">Distance at which light focuses</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="rings" class="form-label">Number of Rings</label>
+                                <input type="number" id="rings" name="rings" 
+                                       value="7" class="form-control" required>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <details class="advanced-section">
+                        <summary class="advanced-toggle">Advanced Options</summary>
+                        <div class="advanced-content">
+                            <div class="form-group">
+                                <label for="negative_mode" class="checkbox-label">
+                                    <input type="checkbox" id="negative_mode" name="negative_mode">
+                                    <span class="checkbox-visual"></span>
+                                    Negative Mode
+                                </label>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="form-actions">
+                        <button type="reset" class="btn btn-secondary">Reset</button>
+                        <button type="submit" class="btn btn-primary">Generate</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-card">
+                    <h3 class="info-title">Status</h3>
+                    <div class="status-display">
+                        <div class="status-icon">⚪</div>
+                        <p class="status-text">Ready to generate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

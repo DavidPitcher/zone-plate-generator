@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Zone Plate Generator - Create Fresnel Zone Plates{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Zone Plate Generator</h1>
+    <p class="page-subtitle">
+        Generate high-quality Fresnel zone plates, zone sieves, and photon sieves for optical applications
+    </p>
+</div>
+
+<div class="layout-grid">
+    <!-- Main Form -->
+    <div class="form-container">
+        <form method="post" action="{{ url_for('generate') }}" class="zone-form">
+            <!-- Zone Plate Type Selection -->
+            <fieldset class="form-section">
+                <legend>Zone Plate Type</legend>
+                <div class="radio-grid">
+                    {% for type_option in valid_types %}
+                    <div class="radio-card">
+                        <input type="radio" id="type_{{ type_option.lower() }}" name="type" value="{{ type_option }}" 
+                               {% if type_option == default_params.type %}checked{% endif %} required>
+                        <label for="type_{{ type_option.lower() }}" class="radio-label">
+                            <span class="radio-visual"></span>
+                            <div class="radio-content">
+                                <strong class="radio-title">{{ type_option.title() }}</strong>
+                                <small class="radio-description">
+                                    {% if type_option == 'GRID' %}All types in grid layout
+                                    {% elif type_option == 'PLATE' %}Classic Fresnel zone plate
+                                    {% elif type_option == 'SIEVE' %}Perforated zone plate
+                                    {% elif type_option == 'PHOTON' %}Photon sieve design
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <!-- Basic Parameters -->
+            <fieldset class="form-section">
+                <legend>Basic Parameters</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="focal_length" class="form-label">
+                            Focal Length (mm)
+                            <span class="help-icon" title="The focal length of the zone plate in millimeters">?</span>
+                        </label>
+                        <input type="number" id="focal_length" name="focal_length" 
+                               value="{{ default_params.focal_length }}" 
+                               min="1" max="10000" step="0.1" 
+                               class="form-control" required>
+                        <small class="form-help">Distance at which the zone plate focuses light</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rings" class="form-label">
+                            Number of Rings
+                            <span class="help-icon" title="Number of opaque rings to generate (1-50)">?</span>
+                        </label>
+                        <input type="number" id="rings" name="rings" 
+                               value="{{ default_params.rings }}" 
+                               min="1" max="50" 
+                               class="form-control" required>
+                        <small class="form-help">Total number of alternating zones</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wavelength" class="form-label">
+                            Wavelength (mm)
+                            <span class="help-icon" title="Wavelength of light (0.00022 = green, 0.00056 = daylight)">?</span>
+                        </label>
+                        <input type="number" id="wavelength" name="wavelength" 
+                               value="{{ default_params.wavelength }}" 
+                               min="0.0001" max="0.001" step="0.00001" 
+                               class="form-control" required>
+                        <small class="form-help">Green: 0.00022, Daylight: 0.00056</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="output_format" class="form-label">
+                            Output Format
+                            <span class="help-icon" title="Format for the generated image file">?</span>
+                        </label>
+                        <select id="output_format" name="output_format" class="form-control" required>
+                            {% for format_option in valid_formats %}
+                            <option value="{{ format_option }}" 
+                                    {% if format_option == default_params.output_format %}selected{% endif %}>
+                                {{ format_option }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-help">PNG: digital, TIFF: print, PDF: vector</small>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Physical Parameters -->
+            <fieldset class="form-section">
+                <legend>Physical Parameters</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="punch_diameter" class="form-label">
+                            Punch Diameter (mm)
+                            <span class="help-icon" title="Diameter of the punch outline to cut the zone plate">?</span>
+                        </label>
+                        <input type="number" id="punch_diameter" name="punch_diameter" 
+                               value="{{ default_params.punch_diameter }}" 
+                               min="1" max="1000" step="0.1" 
+                               class="form-control" required>
+                        <small class="form-help">Cutting outline diameter</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="magnification" class="form-label">
+                            Magnification
+                            <span class="help-icon" title="Magnification factor for the printed zone plate">?</span>
+                        </label>
+                        <input type="number" id="magnification" name="magnification" 
+                               value="{{ default_params.magnification }}" 
+                               min="0.1" max="100" step="0.1" 
+                               class="form-control" required>
+                        <small class="form-help">Scale factor for printing</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="padding" class="form-label">
+                            Padding (mm)
+                            <span class="help-icon" title="Padding around the zone plate">?</span>
+                        </label>
+                        <input type="number" id="padding" name="padding" 
+                               value="{{ default_params.padding }}" 
+                               min="0" max="100" step="0.1" 
+                               class="form-control" required>
+                        <small class="form-help">Border spacing</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="negative_mode" class="checkbox-label">
+                            <input type="checkbox" id="negative_mode" name="negative_mode" 
+                                   {% if default_params.negative_mode %}checked{% endif %}>
+                            <span class="checkbox-visual"></span>
+                            Negative Mode
+                            <span class="help-icon" title="Invert colors for negative film processing">?</span>
+                        </label>
+                        <small class="form-help">Invert colors for film negatives</small>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Advanced Parameters (Collapsible) -->
+            <details class="advanced-section">
+                <summary class="advanced-toggle">Advanced Parameters</summary>
+                <div class="advanced-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sieve_scale" class="form-label">
+                                Sieve Scale Factor
+                                <span class="help-icon" title="Scale factor for sieve holes on a ring">?</span>
+                            </label>
+                            <input type="number" id="sieve_scale" name="sieve_scale" 
+                                   value="{{ default_params.sieve_scale }}" 
+                                   min="0.1" max="10" step="0.1" 
+                                   class="form-control">
+                            <small class="form-help">Hole size multiplier</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sieve_space" class="form-label">
+                                Sieve Spacing (mm)
+                                <span class="help-icon" title="Space between sieve holes in millimeters">?</span>
+                            </label>
+                            <input type="number" id="sieve_space" name="sieve_space" 
+                                   value="{{ default_params.sieve_space }}" 
+                                   min="0.001" max="1" step="0.001" 
+                                   class="form-control">
+                            <small class="form-help">Gap between holes</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dup_focal" class="form-label">
+                                Camera Focal Length (mm)
+                                <span class="help-icon" title="Duplicating camera focal length used">?</span>
+                            </label>
+                            <input type="number" id="dup_focal" name="dup_focal" 
+                                   value="{{ default_params.dup_focal }}" 
+                                   min="1" max="10000" step="1" 
+                                   class="form-control">
+                            <small class="form-help">For camera positioning calculations</small>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- Quick Presets -->
+            <fieldset class="form-section">
+                <legend>Quick Presets</legend>
+                <div class="preset-buttons">
+                    <button type="button" class="btn btn-outline preset-btn" data-preset="photography">
+                        Photography
+                    </button>
+                    <button type="button" class="btn btn-outline preset-btn" data-preset="solar">
+                        Solar Observation
+                    </button>
+                    <button type="button" class="btn btn-outline preset-btn" data-preset="microscopy">
+                        Microscopy
+                    </button>
+                </div>
+            </fieldset>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <button type="reset" class="btn btn-secondary">
+                    Reset Form
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Generate Zone Plate
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Information Panel -->
+    <div class="info-panel">
+        <!-- Status Card -->
+        <div class="info-card">
+            <h3 class="info-title">Generation Status</h3>
+            <div class="status-display">
+                <div class="status-icon">⚪</div>
+                <p class="status-text">Ready to generate</p>
+                <small class="status-help">Configure parameters and submit form</small>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="info-card">
+            <h3 class="info-title">Quick Help</h3>
+            
+            <details class="help-section">
+                <summary>Zone Plate Types</summary>
+                <ul class="help-list">
+                    <li><strong>GRID:</strong> Shows all types on one page</li>
+                    <li><strong>PLATE:</strong> Traditional Fresnel zone plate</li>
+                    <li><strong>SIEVE:</strong> Zone plate with perforated rings</li>
+                    <li><strong>PHOTON:</strong> Optimized for specific wavelengths</li>
+                </ul>
+            </details>
+
+            <details class="help-section">
+                <summary>Common Wavelengths</summary>
+                <ul class="help-list">
+                    <li><strong>0.00022 mm:</strong> Green light</li>
+                    <li><strong>0.00056 mm:</strong> Daylight (yellow)</li>
+                    <li><strong>0.00045 mm:</strong> Blue light</li>
+                    <li><strong>0.00065 mm:</strong> Red light</li>
+                </ul>
+            </details>
+
+            <details class="help-section">
+                <summary>Output Formats</summary>
+                <ul class="help-list">
+                    <li><strong>PNG:</strong> Best for digital viewing</li>
+                    <li><strong>TIFF:</strong> High quality for printing</li>
+                    <li><strong>PDF:</strong> Vector format, scalable</li>
+                </ul>
+            </details>
+        </div>
+    </div>
+</div>
+{% endblock %}
