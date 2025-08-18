@@ -1,4 +1,3 @@
-# Multi-stage build for minimal final image
 FROM python:3.11-slim as builder
 
 # Install system dependencies for building
@@ -58,5 +57,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "src.zone_plate_ui.app:app"]
+# Run the application with the refactored structure
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--chdir", "src/zone_plate_ui", "wsgi:app"]

@@ -1,3 +1,4 @@
+````markdown
 # Zone Plate Generator
 
 A modern Python web application for generating Fresnel zone plates, zone sieves, and photon sieves using PostScript and Ghostscript. Features a responsive HTML5/CSS interface with theme support and containerized deployment for Azure Container Apps.
@@ -49,7 +50,7 @@ A modern Python web application for generating Fresnel zone plates, zone sieves,
 
 4. **Run the application**:
    ```bash
-   poetry run python src/zone_plate_ui/app.py
+   poetry run python src/zone_plate_ui/run.py
    ```
 
 5. **Open your browser**:
@@ -212,8 +213,18 @@ The effective f-stop is calculated based on the diameter and focal length.
 zone-plate-generator/
 ├── src/
 │   └── zone_plate_ui/
-│       ├── __init__.py
-│       ├── app.py              # Main Flask application
+│       ├── __init__.py         # Application factory
+│       ├── run.py              # Entry point for running the app
+│       ├── config/             # Configuration module
+│       │   ├── __init__.py
+│       │   └── config.py       # Configuration classes
+│       ├── models/             # Business logic
+│       │   ├── __init__.py
+│       │   └── zone_plate.py   # Zone plate generator model
+│       ├── controllers/        # Route handlers
+│       │   ├── __init__.py
+│       │   ├── main.py         # Main routes
+│       │   └── errors.py       # Error handlers
 │       ├── templates/          # Jinja2 templates
 │       │   ├── base.html       # Base template with theming
 │       │   ├── index.html      # Main interface
@@ -241,6 +252,17 @@ zone-plate-generator/
 - **Containerization**: Docker with multi-stage builds
 - **Deployment**: Azure Container Apps
 - **Security**: CSP headers, input validation, secure file handling
+
+### Application Structure
+
+The application follows the MVC (Model-View-Controller) pattern and uses the Flask factory pattern:
+
+- **Models**: Business logic and data handling in `models/zone_plate.py`
+- **Views**: HTML templates in `templates/` directory
+- **Controllers**: Route handlers in `controllers/main.py` and `controllers/errors.py`
+- **Configuration**: Configuration classes in `config/config.py`
+- **Application Factory**: Flask application factory in `__init__.py`
+- **Entry Point**: Application entry point in `run.py`
 
 ## Tips for Best Results
 
@@ -273,5 +295,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For additional details and background on zone plates and sieves, see:
 - [Zone Plate and Sieves by Guillermo Peñate](https://pinholeday.org/docs/Zone_Plate_and_Sieves/)
-
-
+````
