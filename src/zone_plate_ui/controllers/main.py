@@ -115,23 +115,14 @@ def set_theme():
     from flask import current_app as app
     
     if request.method == 'POST':
-        # Handle both JSON and form data
-        if request.is_json:
-            theme = request.json.get('theme', 'light')
-        else:
-            theme = request.form.get('theme', 'light')
+        
+        theme = request.form.get('theme', 'light')
         
         if theme not in app.config['THEMES']:
             theme = 'light'
         
         # For form submissions, redirect back to the referring page
-        if not request.is_json:
-            response = redirect(request.referrer or url_for('main.index'))
-            response.set_cookie('theme', theme, max_age=365*24*60*60)  # 1 year
-            return response
-        
-        # For AJAX requests, return JSON
-        response = jsonify({'success': True, 'theme': theme})
+        response = redirect(request.referrer or url_for('main.index'))
         response.set_cookie('theme', theme, max_age=365*24*60*60)  # 1 year
         return response
 

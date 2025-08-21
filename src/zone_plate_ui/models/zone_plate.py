@@ -13,13 +13,13 @@ from typing import Dict, Any, Optional
 class ZonePlateGenerator:
     """Handles zone plate generation using Ghostscript"""
     
-    def __init__(self, postscript_file: Path, output_dir: Path, valid_types: list, valid_formats: list):
+    def __init__(self, postscript_file: Path, output_dir: Path, valid_types: dict, valid_formats: list):
         """Initialize the zone plate generator.
         
         Args:
             postscript_file: Path to the PostScript template file
             output_dir: Directory where generated files will be saved
-            valid_types: List of valid zone plate types
+            valid_types: Dictionary of valid zone plate types (key: type, value: display name)
             valid_formats: List of valid output formats
         """
         self.postscript_file = postscript_file
@@ -60,8 +60,8 @@ class ZonePlateGenerator:
         except (ValueError, TypeError):
             errors['wavelength'] = 'Wavelength must be a valid number'
             
-        if params.get('type') not in self.valid_types:
-            errors['type'] = f'Type must be one of: {", ".join(self.valid_types)}'
+        if params.get('type') not in self.valid_types.keys():
+            errors['type'] = f'Type must be one of: {", ".join(self.valid_types.keys())}'
             
         if params.get('output_format') not in self.valid_formats:
             errors['output_format'] = f'Output format must be one of: {", ".join(self.valid_formats)}'

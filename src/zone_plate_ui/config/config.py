@@ -19,7 +19,8 @@ class Config:
     PORT = int(os.environ.get('PORT', 8000))
     GS_TIMEOUT = int(os.environ.get('GS_TIMEOUT', 120))
     MAX_ZONES = int(os.environ.get('MAX_ZONES', 50))
-    MAX_CONTENT_LENGTH = os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024)   # 16MB max file size
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))   # 16MB max file size
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-unsafe-for-production')
 
     # Zone Plate Default Parameters
     DEFAULT_PARAMS = {
@@ -39,7 +40,12 @@ class Config:
     }
 
     # Valid options
-    VALID_TYPES = ['GRID', 'PLATE', 'SIEVE', 'PHOTON']
+    VALID_TYPES = {
+        'PLATE': 'Zone Plate',
+        'SIEVE': 'Zone Sieve',
+        'PHOTON': 'Photon Sieve',
+        'GRID': 'Grid Pattern'
+    }
     VALID_OUTPUT_FORMATS = ['PNG', 'TIFF', 'PDF']
 
     # Preset configurations for common use cases

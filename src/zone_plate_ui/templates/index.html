@@ -13,25 +13,24 @@
 <div class="layout-grid">
     <!-- Main Form -->
     <div class="form-container">
-        <form method="post" action="{{ url_for('generate') }}" class="zone-form">
+    <form method="post" action="{{ url_for('main.generate') }}" class="zone-form">
             <!-- Zone Plate Type Selection -->
             <fieldset class="form-section">
                 <legend>Zone Plate Type</legend>
                 <div class="radio-grid">
-                    {% for type_option in valid_types %}
+                    {% for type_key, type_name in valid_types.items() %}
                     <div class="radio-card">
-                        <input type="radio" id="type_{{ type_option.lower() }}" name="type" value="{{ type_option }}" 
-                               {% if type_option == default_params.type %}checked{% endif %} required>
-                        <label for="type_{{ type_option.lower() }}" class="radio-label">
+                        <input type="radio" id="type_{{ type_key.lower() }}" name="type" value="{{ type_key }}" 
+                               {% if type_key == default_params.type %}checked{% endif %} required>
+                        <label for="type_{{ type_key.lower() }}" class="radio-label">
                             <span class="radio-visual"></span>
                             <div class="radio-content">
-                                <strong class="radio-title">{{ type_option.title() }}</strong>
+                                <strong class="radio-title">{{ type_name }}</strong>
                                 <small class="radio-description">
-                                    {% if type_option == 'GRID' %}All types in grid layout
-                                    {% elif type_option == 'PLATE' %}Classic Fresnel zone plate
-                                    {% elif type_option == 'SIEVE' %}Perforated zone plate
-                                    {% elif type_option == 'PHOTON' %}Photon sieve design
-                                    {% endif %}
+                                    {% if type_key == 'PLATE' %}Classic Fresnel zone plate{% endif %}
+                                    {% if type_key == 'SIEVE' %}Perforated zone plate{% endif %}
+                                    {% if type_key == 'PHOTON' %}Photon sieve design{% endif %}
+                                    {% if type_key == 'GRID' %}All types in grid layout{% endif %}
                                 </small>
                             </div>
                         </label>
@@ -47,7 +46,7 @@
                     <div class="form-group">
                         <label for="focal_length" class="form-label">
                             Focal Length (mm)
-                            <span class="help-icon" title="The focal length of the zone plate in millimeters">?</span>
+                            <span class="help-icon" data-tooltip="The focal length of the zone plate in millimeters" tabindex="0">?</span>
                         </label>
                         <input type="number" id="focal_length" name="focal_length" 
                                value="{{ default_params.focal_length }}" 
@@ -59,7 +58,7 @@
                     <div class="form-group">
                         <label for="rings" class="form-label">
                             Number of Rings
-                            <span class="help-icon" title="Number of opaque rings to generate (1-50)">?</span>
+                            <span class="help-icon" data-tooltip="Number of opaque rings to generate (1-50)" tabindex="0">?</span>
                         </label>
                         <input type="number" id="rings" name="rings" 
                                value="{{ default_params.rings }}" 
@@ -71,7 +70,7 @@
                     <div class="form-group">
                         <label for="wavelength" class="form-label">
                             Wavelength (mm)
-                            <span class="help-icon" title="Wavelength of light (0.00022 = green, 0.00056 = daylight)">?</span>
+                            <span class="help-icon" data-tooltip="Wavelength of light (0.00022 = green, 0.00056 = daylight)" tabindex="0">?</span>
                         </label>
                         <input type="number" id="wavelength" name="wavelength" 
                                value="{{ default_params.wavelength }}" 
@@ -83,7 +82,7 @@
                     <div class="form-group">
                         <label for="output_format" class="form-label">
                             Output Format
-                            <span class="help-icon" title="Format for the generated image file">?</span>
+                            <span class="help-icon" data-tooltip="Format for the generated image file" tabindex="0">?</span>
                         </label>
                         <select id="output_format" name="output_format" class="form-control" required>
                             {% for format_option in valid_formats %}
@@ -105,7 +104,7 @@
                     <div class="form-group">
                         <label for="punch_diameter" class="form-label">
                             Punch Diameter (mm)
-                            <span class="help-icon" title="Diameter of the punch outline to cut the zone plate">?</span>
+                            <span class="help-icon" data-tooltip="Diameter of the punch outline to cut the zone plate" tabindex="0">?</span>
                         </label>
                         <input type="number" id="punch_diameter" name="punch_diameter" 
                                value="{{ default_params.punch_diameter }}" 
@@ -117,7 +116,7 @@
                     <div class="form-group">
                         <label for="magnification" class="form-label">
                             Magnification
-                            <span class="help-icon" title="Magnification factor for the printed zone plate">?</span>
+                            <span class="help-icon" data-tooltip="Magnification factor for the printed zone plate" tabindex="0">?</span>
                         </label>
                         <input type="number" id="magnification" name="magnification" 
                                value="{{ default_params.magnification }}" 
@@ -129,7 +128,7 @@
                     <div class="form-group">
                         <label for="padding" class="form-label">
                             Padding (mm)
-                            <span class="help-icon" title="Padding around the zone plate">?</span>
+                            <span class="help-icon" data-tooltip="Padding around the zone plate" tabindex="0">?</span>
                         </label>
                         <input type="number" id="padding" name="padding" 
                                value="{{ default_params.padding }}" 
@@ -144,7 +143,7 @@
                                    {% if default_params.negative_mode %}checked{% endif %}>
                             <span class="checkbox-visual"></span>
                             Negative Mode
-                            <span class="help-icon" title="Invert colors for negative film processing">?</span>
+                            <span class="help-icon" data-tooltip="Invert colors for negative film processing" tabindex="0">?</span>
                         </label>
                         <small class="form-help">Invert colors for film negatives</small>
                     </div>
@@ -159,7 +158,7 @@
                         <div class="form-group">
                             <label for="sieve_scale" class="form-label">
                                 Sieve Scale Factor
-                                <span class="help-icon" title="Scale factor for sieve holes on a ring">?</span>
+                                <span class="help-icon" data-tooltip="Scale factor for sieve holes on a ring" tabindex="0">?</span>
                             </label>
                             <input type="number" id="sieve_scale" name="sieve_scale" 
                                    value="{{ default_params.sieve_scale }}" 
@@ -171,7 +170,7 @@
                         <div class="form-group">
                             <label for="sieve_space" class="form-label">
                                 Sieve Spacing (mm)
-                                <span class="help-icon" title="Space between sieve holes in millimeters">?</span>
+                                <span class="help-icon" data-tooltip="Space between sieve holes in millimeters" tabindex="0">?</span>
                             </label>
                             <input type="number" id="sieve_space" name="sieve_space" 
                                    value="{{ default_params.sieve_space }}" 
@@ -183,7 +182,7 @@
                         <div class="form-group">
                             <label for="dup_focal" class="form-label">
                                 Camera Focal Length (mm)
-                                <span class="help-icon" title="Duplicating camera focal length used">?</span>
+                                <span class="help-icon" data-tooltip="Duplicating camera focal length used" tabindex="0">?</span>
                             </label>
                             <input type="number" id="dup_focal" name="dup_focal" 
                                    value="{{ default_params.dup_focal }}" 
@@ -242,10 +241,14 @@
             <details class="help-section">
                 <summary>Zone Plate Types</summary>
                 <ul class="help-list">
-                    <li><strong>GRID:</strong> Shows all types on one page</li>
-                    <li><strong>PLATE:</strong> Traditional Fresnel zone plate</li>
-                    <li><strong>SIEVE:</strong> Zone plate with perforated rings</li>
-                    <li><strong>PHOTON:</strong> Optimized for specific wavelengths</li>
+                    {% for type_key, type_name in valid_types.items() %}
+                    <li><strong>{{ type_name }}:</strong> 
+                        {% if type_key == 'GRID' %}Shows all types on one page{% endif %}
+                        {% if type_key == 'PLATE' %}Traditional Fresnel zone plate{% endif %}
+                        {% if type_key == 'SIEVE' %}Zone plate with perforated rings{% endif %}
+                        {% if type_key == 'PHOTON' %}Zone sieve that has been inverted{% endif %}
+                    </li>
+                    {% endfor %}
                 </ul>
             </details>
 

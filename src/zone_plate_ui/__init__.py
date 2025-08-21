@@ -2,7 +2,6 @@
 
 import os
 import logging
-from pathlib import Path
 from flask import Flask
 
 from .config import LocalConfig, DevConfig, ProdConfig

@@ -171,7 +171,7 @@ body {
     gap: 1rem;
 }
 
-/* Theme Form */
+/* Theme Form (Original) */
 .theme-form {
     display: flex;
     align-items: center;
@@ -194,6 +194,114 @@ body {
 
 .theme-select:focus {
     outline: 2px solid rgba(255,255,255,0.5);
+}
+
+/* Theme Palette Switcher */
+.theme-switcher {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-checkbox {
+    display: none;
+}
+
+.theme-toggle-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25em;
+}
+
+.theme-palette-icon {
+    font-size: 1.7em;
+    color: white;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-palette-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.theme-toggle-label:hover .theme-palette-icon,
+.theme-toggle-label:focus .theme-palette-icon {
+    color: rgba(255,255,255,0.8);
+}
+
+.theme-palette {
+    position: absolute;
+    top: 2.5em;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    background: var(--background-color, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5em;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    padding: 0.5em 0.75em;
+    z-index: 100;
+    min-width: 180px;
+}
+
+.theme-toggle-checkbox:checked ~ .theme-palette {
+    display: flex;
+    animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+
+.theme-palette-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.theme-palette-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.4em 0.6em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 0.3em;
+    transition: background 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+    text-align: left;
+    color: var(--text-color);
+}
+
+.theme-palette-btn:focus,
+.theme-palette-btn:hover {
+    background: var(--surface-color);
+    box-shadow: 0 0 0 2px var(--palette-primary, #0078d4);
+}
+
+.theme-palette-preview {
+    display: inline-block;
+    width: 1.2em;
+    height: 1.2em;
+    border-radius: 50%;
+    border: 2px solid var(--palette-primary, #0078d4);
+    text-align: center;
+    line-height: 1.2em;
+    font-size: 1em;
+}
+
+.theme-palette-name {
+    font-size: 0.9em;
+    /* Ensure readable contrast regardless of theme */
+    color: var(--text-color);
 }
 
 /* Mobile Navigation Styles */
@@ -475,20 +583,48 @@ main {
     justify-content: center;
     font-size: 12px;
     cursor: help;
+    position: relative;
+    outline: none;
 }
 
-.help-icon:hover::after {
-    content: attr(title);
+.help-icon:focus {
+    box-shadow: 0 0 0 2px var(--background-color), 0 0 0 4px var(--primary-color);
+}
+
+.help-icon::after {
+    content: attr(data-tooltip);
     position: absolute;
     background: var(--text-color);
     color: var(--background-color);
     padding: 0.5rem;
     border-radius: 4px;
     font-size: 0.875rem;
-    white-space: nowrap;
-    z-index: 10;
-    margin-top: 1.5rem;
-    margin-left: -50%;
+    z-index: 100;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0.5rem;
+    width: max-content;
+    max-width: 250px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    white-space: normal;
+    text-align: left;
+}
+
+.help-icon:hover::after,
+.help-icon:focus::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Ensure tooltip doesn't get cut off at window edges */
+.help-icon:hover::after {
+    left: clamp(0%, 50%, 100%);
+    transform: translateX(-50%);
 }
 
 .form-control {
@@ -578,16 +714,6 @@ main {
 
 .advanced-toggle:hover {
     background: rgba(var(--primary-color), 0.05);
-}
-
-.advanced-toggle::before {
-    content: '▶';
-    margin-right: 0.5rem;
-    transition: transform 0.3s ease;
-}
-
-.advanced-section[open] .advanced-toggle::before {
-    transform: rotate(90deg);
 }
 
 .advanced-content {
