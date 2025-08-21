@@ -79,6 +79,21 @@ class Config:
         }
     }
 
+    # Tooltip help messages
+    TOOLTIPS = {
+        'focal_length': 'The focal length of the zone plate in millimeters',
+        'rings': 'Number of opaque rings to generate (1-50)',
+        'wavelength': 'Wavelength of light (0.00022 = green, 0.00056 = daylight)',
+        'output_format': 'Format for the generated image file',
+        'punch_diameter': 'Diameter of the punch outline to cut the zone plate',
+        'magnification': 'Magnification factor for the printed zone plate',
+        'padding': 'Padding around the zone plate',
+        'negative_mode': 'Invert colors for negative film processing',
+        'sieve_scale': 'Scale factor for sieve holes on a ring',
+        'sieve_space': 'Space between sieve holes in millimeters',
+        'dup_focal': 'Duplicating camera focal length used'
+    }
+    
     # Color themes
     THEMES = {
         'light': {

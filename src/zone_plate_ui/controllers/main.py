@@ -26,7 +26,8 @@ def index():
                           presets=app.config['PRESETS'],
                           themes=app.config['THEMES'],
                           current_theme=theme,
-                          theme_config=app.config['THEMES'][theme])
+                          theme_config=app.config['THEMES'][theme],
+                          tooltips=app.config['TOOLTIPS'])
 
 
 @main_bp.route('/generate', methods=['POST'])

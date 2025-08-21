@@ -46,7 +46,7 @@
                     <div class="form-group">
                         <label for="focal_length" class="form-label">
                             Focal Length (mm)
-                            <span class="help-icon" data-tooltip="The focal length of the zone plate in millimeters" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['focal_length'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="focal_length" name="focal_length" 
                                value="{{ default_params.focal_length }}" 
@@ -58,7 +58,7 @@
                     <div class="form-group">
                         <label for="rings" class="form-label">
                             Number of Rings
-                            <span class="help-icon" data-tooltip="Number of opaque rings to generate (1-50)" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['rings'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="rings" name="rings" 
                                value="{{ default_params.rings }}" 
@@ -70,7 +70,7 @@
                     <div class="form-group">
                         <label for="wavelength" class="form-label">
                             Wavelength (mm)
-                            <span class="help-icon" data-tooltip="Wavelength of light (0.00022 = green, 0.00056 = daylight)" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['wavelength'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="wavelength" name="wavelength" 
                                value="{{ default_params.wavelength }}" 
@@ -82,7 +82,7 @@
                     <div class="form-group">
                         <label for="output_format" class="form-label">
                             Output Format
-                            <span class="help-icon" data-tooltip="Format for the generated image file" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['output_format'] }}" tabindex="0">?</span>
                         </label>
                         <select id="output_format" name="output_format" class="form-control" required>
                             {% for format_option in valid_formats %}
@@ -104,7 +104,7 @@
                     <div class="form-group">
                         <label for="punch_diameter" class="form-label">
                             Punch Diameter (mm)
-                            <span class="help-icon" data-tooltip="Diameter of the punch outline to cut the zone plate" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['punch_diameter'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="punch_diameter" name="punch_diameter" 
                                value="{{ default_params.punch_diameter }}" 
@@ -116,7 +116,7 @@
                     <div class="form-group">
                         <label for="magnification" class="form-label">
                             Magnification
-                            <span class="help-icon" data-tooltip="Magnification factor for the printed zone plate" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['magnification'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="magnification" name="magnification" 
                                value="{{ default_params.magnification }}" 
@@ -128,7 +128,7 @@
                     <div class="form-group">
                         <label for="padding" class="form-label">
                             Padding (mm)
-                            <span class="help-icon" data-tooltip="Padding around the zone plate" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['padding'] }}" tabindex="0">?</span>
                         </label>
                         <input type="number" id="padding" name="padding" 
                                value="{{ default_params.padding }}" 
@@ -143,7 +143,7 @@
                                    {% if default_params.negative_mode %}checked{% endif %}>
                             <span class="checkbox-visual"></span>
                             Negative Mode
-                            <span class="help-icon" data-tooltip="Invert colors for negative film processing" tabindex="0">?</span>
+                            <span class="help-icon" data-tooltip="{{ tooltips['negative_mode'] }}" tabindex="0">?</span>
                         </label>
                         <small class="form-help">Invert colors for film negatives</small>
                     </div>
@@ -158,7 +158,7 @@
                         <div class="form-group">
                             <label for="sieve_scale" class="form-label">
                                 Sieve Scale Factor
-                                <span class="help-icon" data-tooltip="Scale factor for sieve holes on a ring" tabindex="0">?</span>
+                                <span class="help-icon" data-tooltip="{{ tooltips['sieve_scale'] }}" tabindex="0">?</span>
                             </label>
                             <input type="number" id="sieve_scale" name="sieve_scale" 
                                    value="{{ default_params.sieve_scale }}" 
@@ -170,7 +170,7 @@
                         <div class="form-group">
                             <label for="sieve_space" class="form-label">
                                 Sieve Spacing (mm)
-                                <span class="help-icon" data-tooltip="Space between sieve holes in millimeters" tabindex="0">?</span>
+                                <span class="help-icon" data-tooltip="{{ tooltips['sieve_space'] }}" tabindex="0">?</span>
                             </label>
                             <input type="number" id="sieve_space" name="sieve_space" 
                                    value="{{ default_params.sieve_space }}" 
@@ -182,7 +182,7 @@
                         <div class="form-group">
                             <label for="dup_focal" class="form-label">
                                 Camera Focal Length (mm)
-                                <span class="help-icon" data-tooltip="Duplicating camera focal length used" tabindex="0">?</span>
+                                <span class="help-icon" data-tooltip="{{ tooltips['dup_focal'] }}" tabindex="0">?</span>
                             </label>
                             <input type="number" id="dup_focal" name="dup_focal" 
                                    value="{{ default_params.dup_focal }}" 
