@@ -13,7 +13,7 @@ import ghostscript
 class ZonePlateGenerator:
     """Handles zone plate generation using Ghostscript"""
     
-    def __init__(self, postscript_file: Path, output_dir: Path, valid_types: dict, valid_formats: list):
+    def __init__(self, postscript_file: Path, output_dir: Path, valid_types: dict, valid_formats: list, logger=None):
         """Initialize the zone plate generator.
         
         Args:
@@ -21,12 +21,13 @@ class ZonePlateGenerator:
             output_dir: Directory where generated files will be saved
             valid_types: Dictionary of valid zone plate types (key: type, value: display name)
             valid_formats: List of valid output formats
+            logger: Logger instance to use (if None, will create module-specific logger)
         """
         self.postscript_file = postscript_file
         self.output_dir = output_dir
         self.valid_types = valid_types
         self.valid_formats = valid_formats
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger if logger is not None else logging.getLogger(__name__)
         
     def validate_parameters(self, params: Dict[str, Any]) -> Dict[str, str]:
         """Validate input parameters and return errors if any"""
@@ -59,6 +60,13 @@ class ZonePlateGenerator:
                 errors['wavelength'] = 'Wavelength must be positive'
         except (ValueError, TypeError):
             errors['wavelength'] = 'Wavelength must be a valid number'
+            
+        try:
+            output_resolution = int(params.get('output_resolution', 300))
+            if output_resolution <= 299 or output_resolution > 9600:
+                errors['output_resolution'] = 'Resolution must be between 300 and 9600 DPI'
+        except (ValueError, TypeError):
+            errors['output_resolution'] = 'Resolution must be a valid integer'
             
         if params.get('type') not in self.valid_types.keys():
             errors['type'] = f'Type must be one of: {", ".join(self.valid_types.keys())}'
@@ -134,21 +142,24 @@ class ZonePlateGenerator:
                 temp_ps.write(ps_content)
                 temp_ps_path = temp_ps.name
             
-            # Determine output format and Ghostscript device
+            # Determine output format and Ghostscript device using dictionary dispatch
             output_format = params['output_format'].upper()
-            if output_format == 'PNG':
-                device = 'png16m'
-                extension = '.png'
-            elif output_format == 'TIFF':
-                device = 'tiff24nc'
-                extension = '.tiff'
-            elif output_format == 'PDF':
-                device = 'pdfwrite'
-                extension = '.pdf'
-            else:
+            format_config = {
+                'PNG': {'device': 'png16m', 'extension': '.png'},
+                'TIFF': {'device': 'tiff24nc', 'extension': '.tiff'},
+                'PDF': {'device': 'pdfwrite', 'extension': '.pdf'}
+            }
+            
+            if output_format not in format_config:
                 raise ValueError(f"Unsupported output format: {output_format}")
+                
+            device = format_config[output_format]['device']
+            extension = format_config[output_format]['extension']
             
             output_file = self.output_dir / f"{base_name}{extension}"
+            
+            # Get output resolution from params or default to 300 DPI
+            output_resolution = int(params['output_resolution'])
             
             # Build Ghostscript arguments
             gs_args = [
@@ -157,7 +168,7 @@ class ZonePlateGenerator:
                 "-dBATCH",    # Exit after the last file
                 "-dSAFER",    # Run in safer mode
                 f"-sDEVICE={device}",  # Set the output device
-                "-r300",      # Set resolution to 300 DPI
+                f"-r{output_resolution}",  # Set resolution from parameters
                 f"-sOutputFile={output_file}",  # Set output file
                 temp_ps_path  # Input file
             ]

@@ -1,6 +1,7 @@
 import pytest
 import tempfile
 import os
+import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -41,7 +42,18 @@ showpage
 """)
         ps_file = Path(f.name)
     
-    yield ZonePlateGenerator(ps_file)
+    # Create a test logger
+    test_logger = logging.getLogger('test_zone_plate')
+    test_logger.setLevel(logging.DEBUG)
+    
+    # Create the generator with the test logger
+    yield ZonePlateGenerator(
+        postscript_file=ps_file,
+        output_dir=Path('.'),
+        valid_types={'PLATE': 'Zone Plate', 'SIEVE': 'Zone Sieve'},
+        valid_formats=['PNG', 'TIFF', 'PDF'],
+        logger=test_logger
+    )
     
     # Cleanup
     if ps_file.exists():
@@ -159,12 +171,29 @@ class TestFlaskApp:
         assert b'Zone Plate Generator' in response.data
         assert b'Generate Zone Plate' in response.data
     
-    def test_health_endpoint(self, client):
-        """Test the health check endpoint"""
+    @patch('ghostscript.Ghostscript')
+    def test_health_endpoint_gs_available(self, mock_gs, client):
+        """Test the health check endpoint when Ghostscript is available"""
+        # Mock successful Ghostscript instantiation
+        mock_gs_instance = MagicMock()
+        mock_gs.return_value = mock_gs_instance
+        
         response = client.get('/health')
         assert response.status_code == 200
         data = response.get_json()
         assert data['status'] == 'healthy'
+        assert data['ghostscript_available'] == True
+        assert 'timestamp' in data
+        assert 'app_version' in data
+        
+    @patch('ghostscript.Ghostscript', side_effect=Exception("Ghostscript not available"))
+    def test_health_endpoint_gs_unavailable(self, mock_gs, client):
+        """Test the health check endpoint when Ghostscript is unavailable"""
+        response = client.get('/health')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['status'] == 'degraded'
+        assert data['ghostscript_available'] == False
         assert 'timestamp' in data
     
     def test_set_theme(self, client):
@@ -193,7 +222,20 @@ class TestFlaskApp:
         
         response = client.post('/generate', data=DEFAULT_PARAMS)
         assert response.status_code == 302  # Redirect status code
-        assert '/download/' in response.location  # Check if redirecting to download URL
+        
+        # Should redirect to download URL with token
+        assert '/download/' in response.location  
+        
+        # URL format should be /download/<token>/<filename>
+        url_parts = response.location.split('/')
+        assert len(url_parts) >= 4  # At least 4 parts: '', 'download', 'token', 'filename'
+        
+        # Check that a download token was stored in session
+        with client.session_transaction() as session:
+            assert 'download_tokens' in session
+            # The token from the URL should be in the session
+            token = url_parts[-2]  # Second to last part of URL
+            assert token in session['download_tokens']
     
     @patch('src.zone_plate_ui.app.generator.validate_parameters')
     def test_generate_validation_error(self, mock_validate, client):
@@ -216,41 +258,110 @@ class TestFlaskApp:
         assert response.status_code == 302  # Redirect to index
         assert response.location == 'http://localhost/'  # Default test URL redirects to root
     
+    def test_download_without_token(self, client):
+        """Test downloading without a valid token"""
+        response = client.get('/download/fake_token/nonexistent.png')
+        assert response.status_code == 403  # Forbidden status
+    
     def test_download_nonexistent_file(self, client):
-        """Test downloading non-existent file"""
-        response = client.get('/download/nonexistent.png')
-        assert response.status_code == 302  # Redirect to index
+        """Test download of nonexistent file with valid token"""
+        # Create a valid token for a nonexistent file
+        with client.session_transaction() as session:
+            import time
+            session['download_tokens'] = {
+                'valid_token': {
+                    'filename': 'nonexistent.png',
+                    'expires': time.time() + 300  # 5 minutes from now
+                }
+            }
+        
+        # Mock file not existing
+        with patch('pathlib.Path.exists', return_value=False):
+            response = client.get('/download/valid_token/nonexistent.png')
+            assert response.status_code == 404  # Not Found
     
     @patch('src.zone_plate_ui.app.zone_plate_generator.delete_file')
-    def test_download_deletes_file_after_send(self, mock_delete_file, client):
-        """Test that download route deletes the file after sending"""
+    def test_download_with_valid_token(self, mock_delete_file, client):
+        """Test that download route with valid token works"""
         mock_delete_file.return_value = True
         
-        # Mock the send_file to avoid actual file operations
-        with patch('flask.send_file', return_value='mocked_response'), \
-             patch('pathlib.Path.exists', return_value=True):
-            response = client.get('/download/test_file.png')
-            # Check that delete_file was called with the correct filename
-            mock_delete_file.assert_called_once_with('test_file.png')
-    
-    @patch('src.zone_plate_ui.app.zone_plate_generator.delete_file')
-    def test_download_handles_deletion_failure(self, mock_delete_file, client):
-        """Test that download route handles failure to delete file gracefully"""
-        mock_delete_file.return_value = False
+        # Create a valid token in the session
+        with client.session_transaction() as session:
+            import time
+            session['download_tokens'] = {
+                'valid_token': {
+                    'filename': 'test_file.png',
+                    'expires': time.time() + 300  # 5 minutes from now
+                }
+            }
         
         # Mock the send_file to avoid actual file operations
         with patch('flask.send_file', return_value='mocked_response'), \
              patch('pathlib.Path.exists', return_value=True):
-            response = client.get('/download/test_file.png')
-            mock_delete_file.assert_called_once()
-            # The response should still be successful even if deletion fails
-            assert response == 'mocked_response'
+            response = client.get('/download/valid_token/test_file.png')
+            # Check that delete_file was called with the correct filename
+            mock_delete_file.assert_called_once_with('test_file.png')
+            # Token should be removed from session
+            with client.session_transaction() as session:
+                assert 'valid_token' not in session.get('download_tokens', {})
+    
+    @patch('src.zone_plate_ui.app.zone_plate_generator.delete_file')
+    def test_download_with_expired_token(self, mock_delete_file, client):
+        """Test that download route with expired token fails"""
+        # Create an expired token in the session
+        with client.session_transaction() as session:
+            import time
+            session['download_tokens'] = {
+                'expired_token': {
+                    'filename': 'test_file.png',
+                    'expires': time.time() - 10  # 10 seconds ago
+                }
+            }
+        
+        response = client.get('/download/expired_token/test_file.png')
+        assert response.status_code == 403  # Forbidden status code
+        # Should not call delete_file for expired tokens
+        mock_delete_file.assert_not_called()
+        
+        # Verify expired token was removed from session
+        with client.session_transaction() as session:
+            assert 'expired_token' not in session.get('download_tokens', {})
     
     def test_404_page(self, client):
         """Test 404 error page"""
         response = client.get('/nonexistent')
         assert response.status_code == 404
         assert b'Page Not Found' in response.data
+        
+    def test_cleanup_expired_tokens_middleware(self, client):
+        """Test that middleware cleans up expired tokens"""
+        # Create both valid and expired tokens
+        with client.session_transaction() as session:
+            import time
+            session['download_tokens'] = {
+                'valid_token': {
+                    'filename': 'valid.png',
+                    'expires': time.time() + 300  # 5 minutes from now
+                },
+                'expired_token1': {
+                    'filename': 'expired1.png',
+                    'expires': time.time() - 10  # 10 seconds ago
+                },
+                'expired_token2': {
+                    'filename': 'expired2.png',
+                    'expires': time.time() - 20  # 20 seconds ago
+                }
+            }
+        
+        # Make any request to trigger the middleware
+        client.get('/')
+        
+        # Check session - expired tokens should be removed
+        with client.session_transaction() as session:
+            tokens = session.get('download_tokens', {})
+            assert 'valid_token' in tokens
+            assert 'expired_token1' not in tokens
+            assert 'expired_token2' not in tokens
 
 
 if __name__ == '__main__':

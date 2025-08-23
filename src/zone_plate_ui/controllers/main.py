@@ -1,7 +1,8 @@
 """Main routes for the zone plate generator application."""
 
 import logging
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file
+import time
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 
 from ..models.zone_plate import ZonePlateGenerator
@@ -11,6 +12,11 @@ logger = logging.getLogger(__name__)
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
+
+@main_bp.before_request
+def cleanup_expired_tokens_middleware():
+    """Clean up expired download tokens before each request"""
+    cleanup_expired_tokens()
 
 
 @main_bp.route('/')
@@ -41,15 +47,30 @@ def generate():
         for key, default_value in app.config['DEFAULT_PARAMS'].items():
             form_value = request.form.get(key)
             if form_value is not None:
-                if key in ['focal_length', 'punch_diameter', 'padding', 'magnification', 
-                          'wavelength', 'sieve_scale', 'sieve_space', 'dup_focal']:
-                    params[key] = float(form_value)
-                elif key in ['rings']:
-                    params[key] = int(form_value)
-                elif key in ['negative_mode']:
-                    params[key] = form_value.lower() == 'true'
-                else:
-                    params[key] = form_value
+                # Dictionary-based dispatch (Python's version of switch-case)
+                param_type_map = {
+                    # Float parameters
+                    'punch_diameter': float,
+                    'padding': float,
+                    'magnification': float, 
+                    'wavelength': float,
+                    'sieve_scale': float,
+                    'sieve_space': float,
+                    
+                    # Integer parameters
+                    'rings': int,
+                    'focal_length': int,
+                    'dup_focal': int,
+                    
+                    # Boolean parameters
+                    'negative_mode': lambda x: x.lower() in ('true', 'on', 'yes', '1')
+                }
+                
+                # Get the converter function for this parameter, or use identity function (no conversion)
+                converter = param_type_map.get(key, lambda x: x)
+                
+                # Apply the converter to the form value
+                params[key] = converter(form_value)
             else:
                 params[key] = default_value
         
@@ -66,9 +87,26 @@ def generate():
         output_file = generator.generate_image(params)
         if output_file:
             from pathlib import Path
+            import secrets
+            import time
+            from flask import session
+            
+            # Create a secure download token
             filename = Path(output_file).name
+            token = secrets.token_urlsafe(32)  # 32 bytes of randomness
+            
+            # Store token in session with expiration (5 minutes)
+            expiration = time.time() + 300  # Current time + 5 minutes
+            if 'download_tokens' not in session:
+                session['download_tokens'] = {}
+            session['download_tokens'][token] = {
+                'filename': filename,
+                'expires': expiration
+            }
+            session.modified = True
+            
             flash('Zone plate generated successfully!', 'success')
-            return redirect(url_for('main.download', filename=filename))
+            return redirect(url_for('main.download', token=token, filename=filename))
         else:
             flash('Failed to generate zone plate. Please check your parameters.', 'error')
             return redirect(url_for('main.index'))
@@ -79,20 +117,46 @@ def generate():
         return redirect(url_for('main.index'))
 
 
-@main_bp.route('/download/<filename>')
-def download(filename):
+@main_bp.route('/download/<token>/<filename>')
+def download(token, filename):
     """Download generated zone plate file and delete it afterwards"""
     try:
-        from flask import current_app as app, after_this_request
+        from flask import current_app as app, after_this_request, session, abort
         from pathlib import Path
         import functools
+        import secrets
+        import time
+        
+        # Verify the download token from the session
+        valid_tokens = session.get('download_tokens', {})
+        
+        # Check if token exists and is not expired
+        if token not in valid_tokens:
+            logger.warning(f"Invalid download token attempted: {token}")
+            flash('Access denied: Invalid download token', 'error')
+            return abort(403)  # Return Forbidden status code
+            
+        # Check if token is expired    
+        if time.time() > valid_tokens[token]['expires']:
+            logger.warning(f"Expired download token attempted: {token}")
+            flash('Access denied: Download link has expired', 'error')
+            # Remove expired token
+            valid_tokens.pop(token, None)
+            session.modified = True
+            return abort(403)  # Return Forbidden status code
+            
+        # Token is valid, remove it from session to prevent reuse
+        filename = valid_tokens[token]['filename']
+        session.modified = True
+        valid_tokens.pop(token, None)
         
         safe_filename = secure_filename(filename)
         file_path = app.config['OUTPUT_DIR'] / safe_filename
         
         if not file_path.exists():
+            logger.error(f"File not found for download: {file_path}")
             flash('File not found', 'error')
-            return redirect(url_for('main.index'))
+            return abort(404)  # Return Not Found status code
         
         # Set up a callback to delete the file after the response is sent
         @after_this_request
@@ -136,13 +200,48 @@ def set_theme():
         return response
 
 
+def cleanup_expired_tokens():
+    """Clean up expired download tokens from the session"""
+    from flask import session
+    import time
+    
+    if 'download_tokens' in session:
+        # Find expired tokens
+        current_time = time.time()
+        expired_tokens = [token for token, data in session['download_tokens'].items() 
+                         if current_time > data['expires']]
+        
+        # Remove expired tokens
+        if expired_tokens:
+            for token in expired_tokens:
+                session['download_tokens'].pop(token, None)
+            session.modified = True
+
+
 @main_bp.route('/health')
 def health():
     """Health check endpoint for container monitoring"""
     from datetime import datetime
+    import ghostscript
+    from flask import current_app as app
+    
+    # Clean up expired tokens on health checks
+    cleanup_expired_tokens()
+    
+    # Check if Ghostscript is available
+    ghostscript_available = False
+    try:
+        # Try to create a minimal Ghostscript instance to check availability
+        gs_args = [b"gs", b"-v"]
+        instance = ghostscript.Ghostscript(*gs_args)
+        instance.exit()
+        ghostscript_available = True
+    except Exception as e:
+        logger.warning(f"Ghostscript health check failed: {str(e)}")
     
     return jsonify({
-        'status': 'healthy',
+        'status': 'healthy' if ghostscript_available else 'degraded',
         'timestamp': datetime.now().isoformat(),
-        'ghostscript_available': True  # TODO: Add actual check
+        'ghostscript_available': ghostscript_available,
+        'app_version': app.config.get('VERSION', 'unknown'),
     })

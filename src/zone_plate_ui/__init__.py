@@ -53,7 +53,8 @@ def create_app(config_class=None):
         postscript_file=app.config['POSTSCRIPT_FILE'],
         output_dir=app.config['OUTPUT_DIR'],
         valid_types=app.config['VALID_TYPES'],
-        valid_formats=app.config['VALID_OUTPUT_FORMATS']
+        valid_formats=app.config['VALID_OUTPUT_FORMATS'],
+        logger=app.logger 
     )
     
     # Register blueprint

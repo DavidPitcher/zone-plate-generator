@@ -24,19 +24,19 @@ class Config:
 
     # Zone Plate Default Parameters
     DEFAULT_PARAMS = {
-        'focal_length': 210,
-        'rings': 7,
-        'punch_diameter': 20,
-        'padding': 10,
-        'magnification': 1,
-        'wavelength': 0.00056,
-        'sieve_scale': 1.5,
-        'sieve_space': 0.04,
-        'type': 'PLATE',
-        'dup_focal': 180,
-        'negative_mode': False,
-        'output_format': 'PNG',
-        'output_resolution': 300
+        'focal_length': int(210),  # mm
+        'rings': int(7),  # count
+        'punch_diameter': float(20.0),  # mm
+        'padding': float(10.0),  # mm
+        'magnification': float(1.0),  # scale factor
+        'wavelength': float(0.00056),  # mm (daylight)
+        'sieve_scale': float(1.5),  # scale factor
+        'sieve_space': float(0.04),  # mm
+        'type': str('PLATE'),  # zone plate type
+        'dup_focal': int(180),  # mm (camera focal length)
+        'negative_mode': bool(False),  # invert colors
+        'output_format': str('PNG'),  # file format
+        'output_resolution': int(600)  # DPI
     }
 
     # Valid options
@@ -51,31 +51,31 @@ class Config:
     # Preset configurations for common use cases
     PRESETS = {
         'photography': {
-            'focal_length': 85,
-            'rings': 10,
-            'wavelength': 0.00056,
-            'type': 'PLATE',
-            'punch_diameter': 15,
-            'magnification': 2,
-            'output_format': 'TIFF'
+            'focal_length': int(85),
+            'rings': int(10),
+            'wavelength': float(0.00056),
+            'type': str('PLATE'),
+            'punch_diameter': float(15.0),
+            'magnification': float(2.0),
+            'output_format': str('TIFF')
         },
         'solar': {
-            'focal_length': 500,
-            'rings': 15,
-            'wavelength': 0.00056,
-            'type': 'PLATE',
-            'punch_diameter': 50,
-            'magnification': 1,
-            'output_format': 'PDF'
+            'focal_length': int(500),
+            'rings': int(15),
+            'wavelength': float(0.00056),
+            'type': str('PLATE'),
+            'punch_diameter': float(50.0),
+            'magnification': float(1.0),
+            'output_format': str('PDF')
         },
         'microscopy': {
-            'focal_length': 10,
-            'rings': 20,
-            'wavelength': 0.00045,
-            'type': 'SIEVE',
-            'punch_diameter': 5,
-            'magnification': 5,
-            'output_format': 'PNG'
+            'focal_length': int(10),
+            'rings': int(20),
+            'wavelength': float(0.00045),
+            'type': str('SIEVE'),
+            'punch_diameter': float(5.0),
+            'magnification': float(5.0),
+            'output_format': str('PNG')
         }
     }
 
