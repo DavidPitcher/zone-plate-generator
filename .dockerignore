@@ -1,0 +1,7 @@
+output/
+tmp/
+.env
+*.log
+.vscode/
+.pytest_cache/
+__pycache__/

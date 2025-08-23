@@ -120,6 +120,33 @@ class TestZonePlateGenerator:
         params = DEFAULT_PARAMS.copy()
         result = generator.generate_image(params)
         assert result is None
+        
+    def test_delete_file(self, generator):
+        """Test file deletion functionality"""
+        # Create a test file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.png', delete=False) as f:
+            test_file = Path(f.name)
+            filename = test_file.name
+        
+        # Test successful deletion
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('os.unlink') as mock_unlink:
+            success = generator.delete_file(filename)
+            assert success is True
+            mock_unlink.assert_called_once()
+            
+        # Test file not found
+        with patch('pathlib.Path.exists', return_value=False), \
+             patch('os.unlink') as mock_unlink:
+            success = generator.delete_file(filename)
+            assert success is False
+            mock_unlink.assert_not_called()
+            
+        # Test exception during deletion
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('os.unlink', side_effect=OSError("Test error")):
+            success = generator.delete_file(filename)
+            assert success is False
 
 
 class TestFlaskApp:
@@ -165,14 +192,13 @@ class TestFlaskApp:
         mock_generate.return_value = '/path/to/output.png'
         
         response = client.post('/generate', data=DEFAULT_PARAMS)
-        assert response.status_code == 200
-        data = response.get_json()
-        assert data['success'] == True
-        assert 'download_url' in data
+        assert response.status_code == 302  # Redirect status code
+        assert '/download/' in response.location  # Check if redirecting to download URL
     
     @patch('src.zone_plate_ui.app.generator.validate_parameters')
     def test_generate_validation_error(self, mock_validate, client):
         """Test generation with validation errors"""
+        # We'll keep validation errors as JSON responses for better form handling
         mock_validate.return_value = {'focal_length': 'Invalid value'}
         
         response = client.post('/generate', data=DEFAULT_PARAMS)
@@ -187,14 +213,38 @@ class TestFlaskApp:
         mock_generate.return_value = None
         
         response = client.post('/generate', data=DEFAULT_PARAMS)
-        assert response.status_code == 500
-        data = response.get_json()
-        assert data['success'] == False
+        assert response.status_code == 302  # Redirect to index
+        assert response.location == 'http://localhost/'  # Default test URL redirects to root
     
     def test_download_nonexistent_file(self, client):
         """Test downloading non-existent file"""
         response = client.get('/download/nonexistent.png')
         assert response.status_code == 302  # Redirect to index
+    
+    @patch('src.zone_plate_ui.app.zone_plate_generator.delete_file')
+    def test_download_deletes_file_after_send(self, mock_delete_file, client):
+        """Test that download route deletes the file after sending"""
+        mock_delete_file.return_value = True
+        
+        # Mock the send_file to avoid actual file operations
+        with patch('flask.send_file', return_value='mocked_response'), \
+             patch('pathlib.Path.exists', return_value=True):
+            response = client.get('/download/test_file.png')
+            # Check that delete_file was called with the correct filename
+            mock_delete_file.assert_called_once_with('test_file.png')
+    
+    @patch('src.zone_plate_ui.app.zone_plate_generator.delete_file')
+    def test_download_handles_deletion_failure(self, mock_delete_file, client):
+        """Test that download route handles failure to delete file gracefully"""
+        mock_delete_file.return_value = False
+        
+        # Mock the send_file to avoid actual file operations
+        with patch('flask.send_file', return_value='mocked_response'), \
+             patch('pathlib.Path.exists', return_value=True):
+            response = client.get('/download/test_file.png')
+            mock_delete_file.assert_called_once()
+            # The response should still be successful even if deletion fails
+            assert response == 'mocked_response'
     
     def test_404_page(self, client):
         """Test 404 error page"""

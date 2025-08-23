@@ -1,13 +1,13 @@
 """Zone plate generator model."""
 
 import os
-import subprocess
 import tempfile
 import uuid
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
+import ghostscript
 
 
 class ZonePlateGenerator:
@@ -93,6 +93,28 @@ class ZonePlateGenerator:
             
         return content
     
+    def delete_file(self, filename: str) -> bool:
+        """Delete a generated zone plate file.
+        
+        Args:
+            filename: The name of the file to delete (without path)
+            
+        Returns:
+            bool: True if the file was deleted successfully, False otherwise
+        """
+        try:
+            file_path = self.output_dir / filename
+            if file_path.exists():
+                os.unlink(file_path)
+                self.logger.info(f"Deleted file: {file_path}")
+                return True
+            else:
+                self.logger.warning(f"File not found for deletion: {file_path}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error deleting file {filename}: {str(e)}")
+            return False
+            
     def generate_image(self, params: Dict[str, Any]) -> Optional[str]:
         """Generate zone plate image and return the output file path"""
         errors = self.validate_parameters(params)
@@ -128,42 +150,45 @@ class ZonePlateGenerator:
             
             output_file = self.output_dir / f"{base_name}{extension}"
             
-            # Build Ghostscript command
-            gs_cmd = [
-                'gs',
-                '-dNOPAUSE',
-                '-dBATCH',
-                '-dSAFER',
-                f'-sDEVICE={device}',
-                '-r300',  # 300 DPI
-                f'-sOutputFile={output_file}',
-                temp_ps_path
+            # Build Ghostscript arguments
+            gs_args = [
+                "gs",  # The name of the ghostscript interpreter (required)
+                "-dNOPAUSE",  # Disable prompt and pause after each page
+                "-dBATCH",    # Exit after the last file
+                "-dSAFER",    # Run in safer mode
+                f"-sDEVICE={device}",  # Set the output device
+                "-r300",      # Set resolution to 300 DPI
+                f"-sOutputFile={output_file}",  # Set output file
+                temp_ps_path  # Input file
             ]
             
-            self.logger.info(f"Running Ghostscript command: {' '.join(gs_cmd)}")
+            self.logger.info(f"Running Ghostscript with args: {' '.join(gs_args)}")
             
-            # Run Ghostscript
-            result = subprocess.run(
-                gs_cmd,
-                capture_output=True,
-                text=True,
-                timeout=120  # 2 minute timeout
-            )
-            
-            # Clean up temporary file
-            os.unlink(temp_ps_path)
-            
-            if result.returncode != 0:
-                self.logger.error(f"Ghostscript failed: {result.stderr}")
-                return None
+            # Run Ghostscript using the Python ghostscript module
+            try:
+                # The ghostscript Python API requires a list of bytes objects (not str)
+                encoding = 'utf-8'
+                gs_args_bytes = [arg.encode(encoding) for arg in gs_args]
                 
-            if not output_file.exists():
-                self.logger.error("Output file was not created")
-                return None
+                # Initialize and run Ghostscript
+                instance = ghostscript.Ghostscript(*gs_args_bytes)
+                instance.exit()
                 
-            self.logger.info(f"Successfully generated: {output_file}")
-            return str(output_file)
-            
+                # Check if output file was created
+                if not output_file.exists():
+                    self.logger.error("Output file was not created")
+                    return None
+                    
+                self.logger.info(f"Successfully generated: {output_file}")
+                return str(output_file)
+                
+            except ghostscript.GhostscriptError as gs_error:
+                self.logger.error(f"Ghostscript failed: {str(gs_error)}")
+                return None
+            finally:
+                # Clean up temporary file
+                os.unlink(temp_ps_path)
+                
         except Exception as e:
             self.logger.error(f"Error generating image: {str(e)}")
             return None

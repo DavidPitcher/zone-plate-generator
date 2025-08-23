@@ -59,6 +59,7 @@ def generate():
         # Validate parameters
         errors = generator.validate_parameters(params)
         if errors:
+            # Return JSON error response for form validation errors
             return jsonify({'success': False, 'errors': errors}), 400
         
         # Generate image
@@ -66,31 +67,25 @@ def generate():
         if output_file:
             from pathlib import Path
             filename = Path(output_file).name
-            return jsonify({
-                'success': True, 
-                'message': 'Zone plate generated successfully!',
-                'download_url': url_for('main.download', filename=filename)
-            })
+            flash('Zone plate generated successfully!', 'success')
+            return redirect(url_for('main.download', filename=filename))
         else:
-            return jsonify({
-                'success': False, 
-                'errors': {'general': 'Failed to generate zone plate. Please check your parameters.'}
-            }), 500
+            flash('Failed to generate zone plate. Please check your parameters.', 'error')
+            return redirect(url_for('main.index'))
             
     except Exception as e:
         logger.error(f"Error in generate route: {str(e)}")
-        return jsonify({
-            'success': False, 
-            'errors': {'general': f'An unexpected error occurred: {str(e)}'}
-        }), 500
+        flash(f'An unexpected error occurred: {str(e)}', 'error')
+        return redirect(url_for('main.index'))
 
 
 @main_bp.route('/download/<filename>')
 def download(filename):
-    """Download generated zone plate file"""
+    """Download generated zone plate file and delete it afterwards"""
     try:
-        from flask import current_app as app
+        from flask import current_app as app, after_this_request
         from pathlib import Path
+        import functools
         
         safe_filename = secure_filename(filename)
         file_path = app.config['OUTPUT_DIR'] / safe_filename
@@ -98,6 +93,19 @@ def download(filename):
         if not file_path.exists():
             flash('File not found', 'error')
             return redirect(url_for('main.index'))
+        
+        # Set up a callback to delete the file after the response is sent
+        @after_this_request
+        def delete_after_download(response):
+            try:
+                # Use the generator's delete_file method to delete the file
+                generator = app.zone_plate_generator
+                success = generator.delete_file(safe_filename)
+                if not success:
+                    logger.warning(f"Failed to delete file after download: {safe_filename}")
+            except Exception as e:
+                logger.error(f"Error deleting file after download: {str(e)}")
+            return response
             
         return send_file(
             file_path,

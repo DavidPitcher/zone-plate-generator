@@ -441,7 +441,6 @@ ENV/
 
 # Output files
 output/
-*.ps
 *.png
 *.tiff
 *.pdf
@@ -473,9 +472,6 @@ htmlcov/
 
 # Documentation
 docs/_build/
-
-# Docker
-.dockerignore
 
 # Azure
 .azure/
