@@ -6,13 +6,17 @@
 %***********************************************************************
 % Import Arguments File and Run if it exists, otherwise use defaults
 %***********************************************************************
-%/varsfile (src/postscript/zone_plate_args.ps) def
-ARGFILE status
+ARGFILE (r) file
 {
-    pop pop pop pop
+    %pop pop pop pop
+    closefile
     ARGFILE run
-    (Loaded from Args file) =
-} {
+    (GS -  Successfully loaded arguments from ARGFILE) =
+} stopped {
+    stack
+    %clear
+    (GS - Failed to load arguments from ARGFILE, loading defaults) =
+
     %***********************************************************************
     % DEFAULT ARGUMENTS:
     %***********************************************************************
@@ -50,9 +54,7 @@ ARGFILE status
     /DUP_FOCAL 180 def
 
     /NEGATIVE_MODE false def
-
-    (Loaded default arguments) =
-} ifelse
+} if
 %***********************************************************************
 
 

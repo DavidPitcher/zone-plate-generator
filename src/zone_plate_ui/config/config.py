@@ -29,13 +29,13 @@ class Config:
         'rings': int(7),  # count
         'punch_diameter': float(20.0),  # mm
         'padding': float(10.0),  # mm
-        'magnification': float(1.0),  # scale factor
+        'magnification': int(1),  # scale factor
         'wavelength': float(0.00056),  # mm (daylight)
         'sieve_scale': float(1.5),  # scale factor
         'sieve_space': float(0.04),  # mm
         'type': str('PLATE'),  # zone plate type
         'dup_focal': int(180),  # mm (camera focal length)
-        'negative_mode': bool(False),  # invert colors
+        'negative_mode': str(False).lower(),  # invert colors
         'output_format': str('PNG'),  # file format
         'output_resolution': int(600)  # DPI
     }

@@ -5,6 +5,8 @@ import io
 import uuid
 import subprocess
 import logging
+import tempfile
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, TextIO, Tuple
@@ -18,6 +20,7 @@ class ZonePlateGenerator:
         
         Args:
             postscript_file: Path to the PostScript template file
+            postscript_args_file: Path to the PostScript args template file
             output_dir: Directory where generated files will be saved
             valid_types: Dictionary of valid zone plate types (key: type, value: display name)
             valid_formats: List of valid output formats
@@ -29,6 +32,44 @@ class ZonePlateGenerator:
         self.valid_types = valid_types
         self.valid_formats = valid_formats
         self.logger = logger if logger is not None else logging.getLogger(__name__)
+        
+    def create_temp_args_file(self, params: Dict[str, Any], session_id: str = None) -> Path:
+        """Create a temporary zone_plate_args.ps file from the template using the provided parameters.
+        
+        Args:
+            params: Dictionary of parameters to use for token replacement
+            session_id: Optional session ID to include in the temporary filename
+            
+        Returns:
+            Path: Path to the generated temporary file
+        """
+        # Generate a unique session ID if not provided
+        if session_id is None:
+            session_id = str(uuid.uuid4())[:8]
+        
+        # Create a temporary file name with the session ID in the current working directory
+        temp_file_name = f"zone_plate_args_{session_id}.ps"
+        temp_file = Path.cwd() / "temp" / temp_file_name
+        
+        # Create temp directory if it doesn't exist
+        os.makedirs(temp_file.parent, exist_ok=True)
+        
+        # Read the template file
+        with open(self.postscript_args_file, 'r') as template_file:
+            template_content = template_file.read()
+        
+        # Replace tokens with parameter values
+        for key, value in params.items():
+            # The token format in the template is {{parameter_key}}
+            pattern = re.compile(r'\{\{' + re.escape(key) + r'\}\}')
+            template_content = pattern.sub(str(value), template_content)
+        
+        # Write the processed content to the temporary file
+        with open(temp_file, 'w') as output_file:
+            output_file.write(template_content)
+        
+        self.logger.info(f"Created temporary args file: {temp_file}")
+        return temp_file
         
     def validate_parameters(self, params: Dict[str, Any]) -> Dict[str, str]:
         """Validate input parameters and return errors if any"""
@@ -99,11 +140,12 @@ class ZonePlateGenerator:
             self.logger.error(f"Error deleting file {filename}: {str(e)}")
             return False
             
-    def generate_image(self, params: Dict[str, Any]) -> Optional[str]:
+    def generate_image(self, params: Dict[str, Any], session_id: str = None) -> Optional[str]:
         """Generate zone plate image and return the output file path
         
         Args:
             params: Dictionary of parameters for the zone plate
+            session_id: Optional session ID to include in temp filename
             
         Returns:
             Optional[str]: Path to the generated file, or None if generation failed
@@ -113,11 +155,16 @@ class ZonePlateGenerator:
             self.logger.error(f"Parameter validation failed: {errors}")
             return None
             
+        temp_args_file = None
+        
         try:
             # Create unique filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid.uuid4())[:8]
             base_name = f"zone_plate_{params['type'].lower()}_{timestamp}_{unique_id}"
+            
+            # Generate a temporary args file with the params
+            temp_args_file = self.create_temp_args_file(params, session_id or unique_id)
                        
             # Determine output format and Ghostscript device using dictionary dispatch
             output_format = params['output_format'].upper()
@@ -138,7 +185,7 @@ class ZonePlateGenerator:
             # Get output resolution from params or default to 300 DPI
             output_resolution = int(params['output_resolution'])
             
-            # Build Ghostscript arguments
+            # Build Ghostscript arguments with the temp file
             gs_args = [
                 "gs",  # The name of the ghostscript interpreter (required)
                 "-dNOPAUSE",  # Disable prompt and pause after each page
@@ -147,16 +194,14 @@ class ZonePlateGenerator:
                 f"-sDEVICE={device}",  # Set the output device
                 f"-r{output_resolution}",  # Set resolution from parameters
                 f"-sOutputFile={output_file}",  # Set output file
-                #f"--permit-file-read={self.postscript_args_file}", # Allow Postscript to read the args file
-                #f"-c \"/ARGFILE ({self.postscript_args_file}) def\"",
-                f"--permit-file-read=postscript/",
+                f"--permit-file-read={temp_args_file.parent.relative_to(Path.cwd())}/",  # Allow Postscript to read the temp args file
                 "-c",
-                "/ARGFILE (postscript/zone_plate_args.ps) def",
+                f"/ARGFILE ({temp_args_file.relative_to(Path.cwd())}) def",  # Use relative path for ARGFILE
                 "-f",
                 f"{self.postscript_file}"
             ]
                     
-            self.logger.info(f"Running Ghostscript with args: {' '.join(gs_args)}")
+            self.logger.info(f"Running Ghostscript with args: {' '.join(map(str, gs_args))}")
              
             # Create default streams
             _stdout = io.StringIO()
@@ -211,3 +256,13 @@ class ZonePlateGenerator:
         except Exception as e:
             self.logger.error(f"Error generating image: {str(e)}")
             return None
+        finally:
+            #Clean up the temporary file
+            if temp_args_file and temp_args_file.exists():
+                try:
+                    os.unlink(temp_args_file)
+                    self.logger.info(f"Deleted temporary args file: {temp_args_file}")
+                except Exception as e:
+                    self.logger.error(f"Error deleting temporary file {temp_args_file}: {str(e)}")
+            else:
+                self.logger.debug("No temporary args file to clean up")

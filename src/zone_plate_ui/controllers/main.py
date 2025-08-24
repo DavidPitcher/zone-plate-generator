@@ -1,8 +1,7 @@
 """Main routes for the zone plate generator application."""
 
 import logging
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file, session
-from werkzeug.utils import secure_filename
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -47,8 +46,7 @@ def generate():
                 param_type_map = {
                     # Float parameters
                     'punch_diameter': float,
-                    'padding': float,
-                    'magnification': float, 
+                    'padding': float, 
                     'wavelength': float,
                     'sieve_scale': float,
                     'sieve_space': float,
@@ -56,11 +54,12 @@ def generate():
                     # Integer parameters
                     'rings': int,
                     'focal_length': int,
+                    'magnification': int,
                     'dup_focal': int,
                     'output_resolution': int,
                     
                     # Boolean parameters
-                    'negative_mode': lambda x: x.lower() in ('true', 'on', 'yes', '1')
+                    'negative_mode': lambda x: 'true' if x.lower() in ('true', 'on', 'yes', '1') else default_value
                 }
                 
                 # Get the converter function for this parameter, or use identity function (no conversion)
@@ -103,7 +102,7 @@ def generate():
             session.modified = True
             
             flash('Zone plate generated successfully!', 'success')
-            return redirect(url_for('main.download', token=token, filename=filename))
+            return redirect(url_for('main.download', token=token))
         else:
             flash('Failed to generate zone plate. Please check your parameters.', 'error')
             return redirect(url_for('main.index'))
@@ -114,14 +113,11 @@ def generate():
         return redirect(url_for('main.index'))
 
 
-@main_bp.route('/download/<token>/<filename>')
-def download(token, filename):
+@main_bp.route('/download/<token>')
+def download(token):
     """Download generated zone plate file and delete it afterwards"""
     try:
         from flask import current_app as app, after_this_request, session, abort
-        from pathlib import Path
-        import functools
-        import secrets
         import time
         
         # Verify the download token from the session
@@ -146,9 +142,8 @@ def download(token, filename):
         filename = valid_tokens[token]['filename']
         session.modified = True
         valid_tokens.pop(token, None)
-        
-        safe_filename = secure_filename(filename)
-        file_path = app.config['OUTPUT_DIR'] / safe_filename
+
+        file_path = app.config['OUTPUT_DIR'] / filename
         
         if not file_path.exists():
             logger.error(f"File not found for download: {file_path}")
@@ -161,9 +156,9 @@ def download(token, filename):
             try:
                 # Use the generator's delete_file method to delete the file
                 generator = app.zone_plate_generator
-                success = generator.delete_file(safe_filename)
+                success = generator.delete_file(filename)
                 if not success:
-                    logger.warning(f"Failed to delete file after download: {safe_filename}")
+                    logger.warning(f"Failed to delete file after download: {filename}")
             except Exception as e:
                 logger.error(f"Error deleting file after download: {str(e)}")
             return response
@@ -171,7 +166,7 @@ def download(token, filename):
         return send_file(
             file_path,
             as_attachment=True,
-            download_name=safe_filename
+            download_name=filename
         )
     except Exception as e:
         logger.error(f"Error downloading file: {str(e)}")
