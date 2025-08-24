@@ -13,6 +13,7 @@ class Config:
     OUTPUT_DIR = BASE_DIR / "output"
     POSTSCRIPT_DIR = APP_DIR.parent / "postscript"
     POSTSCRIPT_FILE = POSTSCRIPT_DIR / "zone_plate_gen.ps"
+    POSTSCRIPT_ARGS_FILE = POSTSCRIPT_DIR / "zone_plate_args.ps"
 
     # Environment Configuration
     FLASK_ENV = os.environ.get('FLASK_ENV', 'local')
@@ -85,6 +86,7 @@ class Config:
         'rings': 'Number of opaque rings to generate (1-50)',
         'wavelength': 'Wavelength of light (0.00022 = green, 0.00056 = daylight)',
         'output_format': 'Format for the generated image file',
+        'output_resolution': 'Output image resolution in dots per inch (DPI), usually dependent on output device',
         'punch_diameter': 'Diameter of the punch outline to cut the zone plate',
         'magnification': 'Magnification factor for the printed zone plate',
         'padding': 'Padding around the zone plate',

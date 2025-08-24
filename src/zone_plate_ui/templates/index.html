@@ -50,7 +50,7 @@
                         </label>
                         <input type="number" id="focal_length" name="focal_length" 
                                value="{{ default_params.focal_length }}" 
-                               min="1" max="10000" step="0.1" 
+                               min="1" max="2400" step="1" 
                                class="form-control" required>
                         <small class="form-help">Distance at which the zone plate focuses light</small>
                     </div>
@@ -93,6 +93,18 @@
                             {% endfor %}
                         </select>
                         <small class="form-help">PNG: digital, TIFF: print, PDF: vector</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="output_resolution" class="form-label">
+                            Output Resolution
+                            <span class="help-icon" data-tooltip="{{ tooltips['output_resolution'] }}" tabindex="0">?</span>
+                        </label>
+                        <input type="number" id="output_resolution" name="output_resolution" 
+                               value="{{ default_params.output_resolution }}" 
+                               min="300" max="9600" step="1" 
+                               class="form-control" required>
+                        <small class="form-help">Image resolution in DPI</small>
                     </div>
                 </div>
             </fieldset>

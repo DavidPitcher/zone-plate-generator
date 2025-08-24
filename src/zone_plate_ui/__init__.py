@@ -51,6 +51,7 @@ def create_app(config_class=None):
     # Initialize ZonePlateGenerator
     app.zone_plate_generator = ZonePlateGenerator(
         postscript_file=app.config['POSTSCRIPT_FILE'],
+        postscript_args_file=app.config['POSTSCRIPT_ARGS_FILE'],
         output_dir=app.config['OUTPUT_DIR'],
         valid_types=app.config['VALID_TYPES'],
         valid_formats=app.config['VALID_OUTPUT_FORMATS'],

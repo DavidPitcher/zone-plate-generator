@@ -20,6 +20,11 @@ def main():
     debug = app.config.get('DEBUG', False)
     app.logger.info(f"Port Configuration: {port}")
     app.logger.info(f"Debug Configuration: {debug}")
+
+    app.logger.info(f"Current Working Directory: {Path.cwd()}")
+    app.logger.info(f"Module Directory: {Path(__file__)}")
+    app.logger.info(f"Script Directory: {Path(__file__).parent}")
+
     app.run(host='0.0.0.0', port=port, debug=debug)
 
 if __name__ == '__main__':

@@ -1,11 +1,8 @@
 """Main routes for the zone plate generator application."""
 
 import logging
-import time
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
-
-from ..models.zone_plate import ZonePlateGenerator
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -47,7 +44,6 @@ def generate():
         for key, default_value in app.config['DEFAULT_PARAMS'].items():
             form_value = request.form.get(key)
             if form_value is not None:
-                # Dictionary-based dispatch (Python's version of switch-case)
                 param_type_map = {
                     # Float parameters
                     'punch_diameter': float,
@@ -61,6 +57,7 @@ def generate():
                     'rings': int,
                     'focal_length': int,
                     'dup_focal': int,
+                    'output_resolution': int,
                     
                     # Boolean parameters
                     'negative_mode': lambda x: x.lower() in ('true', 'on', 'yes', '1')
@@ -222,7 +219,7 @@ def cleanup_expired_tokens():
 def health():
     """Health check endpoint for container monitoring"""
     from datetime import datetime
-    import ghostscript
+    import subprocess
     from flask import current_app as app
     
     # Clean up expired tokens on health checks
@@ -230,18 +227,39 @@ def health():
     
     # Check if Ghostscript is available
     ghostscript_available = False
+    ghostscript_version = "Unknown"
     try:
-        # Try to create a minimal Ghostscript instance to check availability
-        gs_args = [b"gs", b"-v"]
-        instance = ghostscript.Ghostscript(*gs_args)
-        instance.exit()
-        ghostscript_available = True
-    except Exception as e:
+        # Try to run Ghostscript version check as a subprocess
+        process = subprocess.run(
+            ["gs", "-v"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,  # Don't raise an exception on non-zero exit
+            timeout=5     # Timeout after 5 seconds
+        )
+        
+        # Check if process was successful
+        if process.returncode == 0:
+            ghostscript_available = True
+            # Extract version information from stdout
+            output = process.stdout
+            if output:
+                # Usually the first line contains version info
+                first_line = output.splitlines()[0] if output.splitlines() else "Unknown"
+                ghostscript_version = first_line.strip()
+                logger.debug(f"Ghostscript version: {ghostscript_version}")
+        else:
+            logger.warning(f"Ghostscript check failed with return code {process.returncode}")
+            if process.stderr:
+                logger.warning(f"Error output: {process.stderr}")
+    except (subprocess.SubprocessError, OSError) as e:
         logger.warning(f"Ghostscript health check failed: {str(e)}")
     
     return jsonify({
         'status': 'healthy' if ghostscript_available else 'degraded',
         'timestamp': datetime.now().isoformat(),
         'ghostscript_available': ghostscript_available,
+        'ghostscript_version': ghostscript_version,
         'app_version': app.config.get('VERSION', 'unknown'),
     })

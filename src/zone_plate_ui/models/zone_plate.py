@@ -1,19 +1,19 @@
 """Zone plate generator model."""
 
 import os
-import tempfile
+import io
 import uuid
+import subprocess
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
-import ghostscript
+from typing import Dict, Any, Optional, Union, TextIO, Tuple
 
 
 class ZonePlateGenerator:
     """Handles zone plate generation using Ghostscript"""
     
-    def __init__(self, postscript_file: Path, output_dir: Path, valid_types: dict, valid_formats: list, logger=None):
+    def __init__(self, postscript_file: Path, postscript_args_file: Path, output_dir: Path, valid_types: dict, valid_formats: list, logger=None):
         """Initialize the zone plate generator.
         
         Args:
@@ -24,6 +24,7 @@ class ZonePlateGenerator:
             logger: Logger instance to use (if None, will create module-specific logger)
         """
         self.postscript_file = postscript_file
+        self.postscript_args_file = postscript_args_file
         self.output_dir = output_dir
         self.valid_types = valid_types
         self.valid_formats = valid_formats
@@ -76,31 +77,6 @@ class ZonePlateGenerator:
             
         return errors
     
-    def create_postscript_content(self, params: Dict[str, Any]) -> str:
-        """Create PostScript content with user parameters"""
-        with open(self.postscript_file, 'r') as f:
-            content = f.read()
-        
-        # Replace parameter values in the PostScript content
-        replacements = {
-            '/FOCAL 210 def': f'/FOCAL {params["focal_length"]} def',
-            '/RINGS 7 def': f'/RINGS {params["rings"]} def',
-            '/PUNCH_DIAMETER 20 def': f'/PUNCH_DIAMETER {params["punch_diameter"]} def',
-            '/PADDING 10 def': f'/PADDING {params["padding"]} def',
-            '/MAG 1 def': f'/MAG {params["magnification"]} def',
-            '/WAVE_LENGTH 0.00056 def': f'/WAVE_LENGTH {params["wavelength"]} def',
-            '/SIEVE_SCALE 1.5 def': f'/SIEVE_SCALE {params["sieve_scale"]} def',
-            '/SIEVE_SPACE 0.04 def': f'/SIEVE_SPACE {params["sieve_space"]} def',
-            '/TYPE (PLATE) def': f'/TYPE ({params["type"]}) def',
-            '/DUP_FOCAL 180 def': f'/DUP_FOCAL {params["dup_focal"]} def',
-            '/NEGATIVE_MODE false def': f'/NEGATIVE_MODE {str(params["negative_mode"]).lower()} def'
-        }
-        
-        for old, new in replacements.items():
-            content = content.replace(old, new)
-            
-        return content
-    
     def delete_file(self, filename: str) -> bool:
         """Delete a generated zone plate file.
         
@@ -124,7 +100,14 @@ class ZonePlateGenerator:
             return False
             
     def generate_image(self, params: Dict[str, Any]) -> Optional[str]:
-        """Generate zone plate image and return the output file path"""
+        """Generate zone plate image and return the output file path
+        
+        Args:
+            params: Dictionary of parameters for the zone plate
+            
+        Returns:
+            Optional[str]: Path to the generated file, or None if generation failed
+        """
         errors = self.validate_parameters(params)
         if errors:
             self.logger.error(f"Parameter validation failed: {errors}")
@@ -135,13 +118,7 @@ class ZonePlateGenerator:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid.uuid4())[:8]
             base_name = f"zone_plate_{params['type'].lower()}_{timestamp}_{unique_id}"
-            
-            # Create temporary PostScript file with user parameters
-            ps_content = self.create_postscript_content(params)
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.ps', delete=False) as temp_ps:
-                temp_ps.write(ps_content)
-                temp_ps_path = temp_ps.name
-            
+                       
             # Determine output format and Ghostscript device using dictionary dispatch
             output_format = params['output_format'].upper()
             format_config = {
@@ -170,36 +147,67 @@ class ZonePlateGenerator:
                 f"-sDEVICE={device}",  # Set the output device
                 f"-r{output_resolution}",  # Set resolution from parameters
                 f"-sOutputFile={output_file}",  # Set output file
-                temp_ps_path  # Input file
+                #f"--permit-file-read={self.postscript_args_file}", # Allow Postscript to read the args file
+                #f"-c \"/ARGFILE ({self.postscript_args_file}) def\"",
+                f"--permit-file-read=postscript/",
+                "-c",
+                "/ARGFILE (postscript/zone_plate_args.ps) def",
+                "-f",
+                f"{self.postscript_file}"
             ]
-            
+                    
             self.logger.info(f"Running Ghostscript with args: {' '.join(gs_args)}")
-            
-            # Run Ghostscript using the Python ghostscript module
+             
+            # Create default streams
+            _stdout = io.StringIO()
+            _stderr = io.StringIO()
+                
             try:
-                # The ghostscript Python API requires a list of bytes objects (not str)
-                encoding = 'utf-8'
-                gs_args_bytes = [arg.encode(encoding) for arg in gs_args]
+                self.logger.info("Starting Ghostscript execution using subprocess...")
                 
-                # Initialize and run Ghostscript
-                instance = ghostscript.Ghostscript(*gs_args_bytes)
-                instance.exit()
+                # Run Ghostscript using subprocess
+                process = subprocess.run(
+                    gs_args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=False,  # Don't raise exception on non-zero exit
+                    shell=False   # Run directly without shell interpretation
+                )
                 
+                # Capture stdout and stderr
+                _stdout.write(process.stdout)
+                _stderr.write(process.stderr)
+                
+                # Log the output if using default streams
+                if _stdout:
+                    stdout_content = _stdout.getvalue()
+                    if stdout_content.strip():
+                        self.logger.debug(f"Ghostscript stdout: {stdout_content}")
+                if _stderr:
+                    stderr_content = _stderr.getvalue()
+                    if stderr_content.strip():
+                        self.logger.debug(f"Ghostscript stderr: {stderr_content}")
+                
+                # Check process return code
+                if process.returncode != 0:
+                    self.logger.error(f"Ghostscript process failed with code {process.returncode}")
+                    return None
+                
+                self.logger.info("Ghostscript execution completed successfully")
+            
                 # Check if output file was created
                 if not output_file.exists():
-                    self.logger.error("Output file was not created")
+                    self.logger.error("Output file was not created despite successful process exit")
                     return None
                     
-                self.logger.info(f"Successfully generated: {output_file}")
+                file_size = output_file.stat().st_size
+                self.logger.info(f"Successfully generated: {output_file} (size: {file_size} bytes)")
                 return str(output_file)
                 
-            except ghostscript.GhostscriptError as gs_error:
-                self.logger.error(f"Ghostscript failed: {str(gs_error)}")
+            except subprocess.SubprocessError as e:
+                self.logger.error(f"Subprocess execution failed: {str(e)}")
                 return None
-            finally:
-                # Clean up temporary file
-                os.unlink(temp_ps_path)
-                
         except Exception as e:
             self.logger.error(f"Error generating image: {str(e)}")
             return None
