@@ -3,37 +3,227 @@
 {% block title %}Error {{ error_code }} - Zone Plate Generator{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card shadow-sm text-center">
-            <div class="card-body py-5">
-                <div class="mb-4">
-                    {% if error_code == 404 %}
-                        <i class="fas fa-search fa-4x text-warning mb-3"></i>
-                        <h2 class="text-warning">Page Not Found</h2>
-                    {% elif error_code == 500 %}
-                        <i class="fas fa-exclamation-triangle fa-4x text-danger mb-3"></i>
-                        <h2 class="text-danger">Server Error</h2>
+<div class="error-container">
+    <div class="error-card">
+        <div class="error-icon">
+            {% if error_code == 400 %}
+                <span class="error-symbol" aria-hidden="true">⚠</span>
+            {% elif error_code == 403 %}
+                <span class="error-symbol" aria-hidden="true">🔒</span>
+            {% elif error_code == 404 %}
+                <span class="error-symbol" aria-hidden="true">🔍</span>
+            {% elif error_code == 405 %}
+                <span class="error-symbol" aria-hidden="true">⛔</span>
+            {% elif error_code == 500 %}
+                <span class="error-symbol" aria-hidden="true">⚡</span>
+            {% else %}
+                <span class="error-symbol" aria-hidden="true">❌</span>
+            {% endif %}
+        </div>
+        
+        <div class="error-content">
+            <h1 class="error-title">Error {{ error_code }}</h1>
+            
+            {% if error_code == 400 %}
+                <h2 class="error-subtitle">Invalid Input</h2>
+            {% elif error_code == 403 %}
+                <h2 class="error-subtitle">Access Denied</h2>
+            {% elif error_code == 404 %}
+                <h2 class="error-subtitle">Page Not Found</h2>
+            {% elif error_code == 405 %}
+                <h2 class="error-subtitle">Method Not Allowed</h2>
+            {% elif error_code == 500 %}
+                <h2 class="error-subtitle">Server Error</h2>
+            {% else %}
+                <h2 class="error-subtitle">Error</h2>
+            {% endif %}
+            
+            <p class="error-message">{{ error_message }}</p>
+            
+            {% if error_details %}
+                <div class="error-details">
+                    {% if error_details is mapping %}
+                        <h3>Details:</h3>
+                        <ul class="error-list">
+                            {% for field, detail in error_details.items() %}
+                                <li><strong>{{ field }}:</strong> {{ detail }}</li>
+                            {% endfor %}
+                        </ul>
                     {% else %}
-                        <i class="fas fa-exclamation-circle fa-4x text-secondary mb-3"></i>
-                        <h2 class="text-secondary">Error {{ error_code }}</h2>
+                        <p class="error-detail-text">{{ error_details }}</p>
                     {% endif %}
                 </div>
-                
-                <p class="text-muted mb-4">{{ error_message }}</p>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary">
-                        <i class="fas fa-home me-1"></i>
-                        Go Home
-                    </a>
-                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        Go Back
-                    </button>
-                </div>
-            </div>
+            {% endif %}
+        </div>
+        
+        <div class="error-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                <span aria-hidden="true">🏠</span>
+                Go Home
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="history.back()">
+                <span aria-hidden="true">⬅</span>
+                Go Back
+            </button>
         </div>
     </div>
 </div>
+
+<style>
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 2rem 1rem;
+}
+
+.error-card {
+    background: var(--surface-color);
+    border: 1px solid var(--secondary-color);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.error-icon {
+    margin-bottom: 1.5rem;
+}
+
+.error-symbol {
+    font-size: 4rem;
+    line-height: 1;
+    display: inline-block;
+}
+
+.error-content {
+    margin-bottom: 2rem;
+}
+
+.error-title {
+    font-size: 2.5rem;
+    color: var(--danger-color);
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+}
+
+.error-subtitle {
+    font-size: 1.5rem;
+    color: var(--text-color);
+    margin: 0 0 1rem 0;
+    font-weight: 500;
+}
+
+.error-message {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    margin: 0 0 1rem 0;
+    opacity: 0.8;
+}
+
+.error-details {
+    background: var(--background-color);
+    border: 1px solid var(--secondary-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: left;
+}
+
+.error-details h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.error-list {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+}
+
+.error-list li {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.error-detail-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    font-style: italic;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-color);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border: 1px solid var(--secondary-color);
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+    .error-card {
+        padding: 2rem 1rem;
+    }
+    
+    .error-title {
+        font-size: 2rem;
+    }
+    
+    .error-subtitle {
+        font-size: 1.25rem;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
 {% endblock %}

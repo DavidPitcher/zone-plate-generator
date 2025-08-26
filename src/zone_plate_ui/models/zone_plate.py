@@ -191,6 +191,7 @@ class ZonePlateGenerator:
                 "-dNOPAUSE",  # Disable prompt and pause after each page
                 "-dBATCH",    # Exit after the last file
                 "-dSAFER",    # Run in safer mode
+                "-dFAILUREONERROR",  # Stop processing on errors
                 f"-sDEVICE={device}",  # Set the output device
                 f"-r{output_resolution}",  # Set resolution from parameters
                 f"-sOutputFile={output_file}",  # Set output file
@@ -224,34 +225,43 @@ class ZonePlateGenerator:
                 _stdout.write(process.stdout)
                 _stderr.write(process.stderr)
                 
-                # Log the output if using default streams
-                if _stdout:
-                    stdout_content = _stdout.getvalue()
-                    if stdout_content.strip():
-                        self.logger.debug(f"Ghostscript stdout: {stdout_content}")
-                if _stderr:
-                    stderr_content = _stderr.getvalue()
-                    if stderr_content.strip():
-                        self.logger.debug(f"Ghostscript stderr: {stderr_content}")
+                # Get the content from streams for logging and analysis
+                stdout_content = _stdout.getvalue()
+                stderr_content = _stderr.getvalue()
                 
-                # Check process return code
+                # Log output for debugging (regardless of success/failure)
+                if stdout_content.strip():
+                    self.logger.debug(f"Ghostscript stdout: {stdout_content}")
+                if stderr_content.strip():
+                    self.logger.debug(f"Ghostscript stderr: {stderr_content}")
+                
                 if process.returncode != 0:
-                    self.logger.error(f"Ghostscript process failed with code {process.returncode}")
+                    self.logger.error(f"Ghostscript process failed with exit code {process.returncode}")
+                    self.logger.error(f"PostScript error: ARGFILE not found or cannot be read")
+                    if stderr_content.strip():
+                        self.logger.error(f"Error details: {stderr_content}")
                     return None
                 
-                self.logger.info("Ghostscript execution completed successfully")
+                self.logger.info(f"Ghostscript execution completed successfully with exit code {process.returncode}")
             
-                # Check if output file was created
                 if not output_file.exists():
                     self.logger.error("Output file was not created despite successful process exit")
                     return None
-                    
+                
                 file_size = output_file.stat().st_size
+                if file_size == 0:
+                    self.logger.error(f"Output file was created but is empty: {output_file}")
+                    return None
+                    
                 self.logger.info(f"Successfully generated: {output_file} (size: {file_size} bytes)")
                 return str(output_file)
                 
             except subprocess.SubprocessError as e:
                 self.logger.error(f"Subprocess execution failed: {str(e)}")
+                return None
+            except FileNotFoundError as e:
+                self.logger.error(f"Ghostscript executable not found: {str(e)}")
+                self.logger.error("Please ensure Ghostscript is installed and 'gs' is available in PATH")
                 return None
         except Exception as e:
             self.logger.error(f"Error generating image: {str(e)}")

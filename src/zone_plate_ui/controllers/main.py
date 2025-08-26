@@ -1,13 +1,15 @@
 """Main routes for the zone plate generator application."""
 
 import logging
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, send_file, current_app
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from .errors import ValidationError, GenerationError, FileNotFoundError, AccessDeniedError
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
+
+# Initialize logger at module level
+logger = logging.getLogger(__name__)
 
 @main_bp.before_request
 def cleanup_expired_tokens_middleware():
@@ -44,40 +46,29 @@ def generate():
             form_value = request.form.get(key)
             if form_value is not None:
                 param_type_map = {
-                    # Float parameters
                     'punch_diameter': float,
                     'padding': float, 
                     'wavelength': float,
                     'sieve_scale': float,
                     'sieve_space': float,
-                    
-                    # Integer parameters
                     'rings': int,
                     'focal_length': int,
                     'magnification': int,
                     'dup_focal': int,
                     'output_resolution': int,
-                    
-                    # Boolean parameters
                     'negative_mode': lambda x: 'true' if x.lower() in ('true', 'on', 'yes', '1') else default_value
                 }
-                
-                # Get the converter function for this parameter, or use identity function (no conversion)
                 converter = param_type_map.get(key, lambda x: x)
-                
-                # Apply the converter to the form value
                 params[key] = converter(form_value)
             else:
                 params[key] = default_value
         
-        # Get generator from app
         generator = app.zone_plate_generator
         
-        # Validate parameters
         errors = generator.validate_parameters(params)
         if errors:
-            # Return JSON error response for form validation errors
-            return jsonify({'success': False, 'errors': errors}), 400
+            # Raise validation error to be handled by error handler
+            raise ValidationError("Invalid input parameters provided", errors)
         
         # Generate image
         output_file = generator.generate_image(params)
@@ -101,23 +92,23 @@ def generate():
             }
             session.modified = True
             
-            flash('Zone plate generated successfully!', 'success')
             return redirect(url_for('main.download', token=token))
         else:
-            flash('Failed to generate zone plate. Please check your parameters.', 'error')
-            return redirect(url_for('main.index'))
+            raise GenerationError("Failed to generate zone plate. Please check your parameters.")
             
+    except ValidationError:
+        # Re-raise validation errors to be handled by error handler
+        raise
     except Exception as e:
-        logger.error(f"Error in generate route: {str(e)}")
-        flash(f'An unexpected error occurred: {str(e)}', 'error')
-        return redirect(url_for('main.index'))
+        current_app.logger.error(f"Error in generate route: {str(e)}")
+        raise GenerationError(f"An unexpected error occurred: {str(e)}")
 
 
 @main_bp.route('/download/<token>')
 def download(token):
     """Download generated zone plate file and delete it afterwards"""
     try:
-        from flask import current_app as app, after_this_request, session, abort
+        from flask import current_app as app, after_this_request, session
         import time
         
         # Verify the download token from the session
@@ -125,18 +116,16 @@ def download(token):
         
         # Check if token exists and is not expired
         if token not in valid_tokens:
-            logger.warning(f"Invalid download token attempted: {token}")
-            flash('Access denied: Invalid download token', 'error')
-            return abort(403)  # Return Forbidden status code
+            current_app.logger.warning(f"Invalid download token attempted: {token}")
+            raise AccessDeniedError("Invalid download token", "The download link is invalid or has been used")
             
         # Check if token is expired    
         if time.time() > valid_tokens[token]['expires']:
-            logger.warning(f"Expired download token attempted: {token}")
-            flash('Access denied: Download link has expired', 'error')
+            current_app.logger.warning(f"Expired download token attempted: {token}")
             # Remove expired token
             valid_tokens.pop(token, None)
             session.modified = True
-            return abort(403)  # Return Forbidden status code
+            raise AccessDeniedError("Download link has expired", "Please generate a new zone plate to get a fresh download link")
             
         # Token is valid, remove it from session to prevent reuse
         filename = valid_tokens[token]['filename']
@@ -146,9 +135,8 @@ def download(token):
         file_path = app.config['OUTPUT_DIR'] / filename
         
         if not file_path.exists():
-            logger.error(f"File not found for download: {file_path}")
-            flash('File not found', 'error')
-            return abort(404)  # Return Not Found status code
+            current_app.logger.error(f"File not found for download: {file_path}")
+            raise FileNotFoundError("File not found", filename)
         
         # Set up a callback to delete the file after the response is sent
         @after_this_request
@@ -158,9 +146,9 @@ def download(token):
                 generator = app.zone_plate_generator
                 success = generator.delete_file(filename)
                 if not success:
-                    logger.warning(f"Failed to delete file after download: {filename}")
+                    current_app.logger.warning(f"Failed to delete file after download: {filename}")
             except Exception as e:
-                logger.error(f"Error deleting file after download: {str(e)}")
+                current_app.logger.error(f"Error deleting file after download: {str(e)}")
             return response
             
         return send_file(
@@ -168,10 +156,12 @@ def download(token):
             as_attachment=True,
             download_name=filename
         )
+    except (AccessDeniedError, FileNotFoundError):
+        # Re-raise custom errors to be handled by error handlers
+        raise
     except Exception as e:
-        logger.error(f"Error downloading file: {str(e)}")
-        flash('Error downloading file', 'error')
-        return redirect(url_for('main.index'))
+        current_app.logger.error(f"Error downloading file: {str(e)}")
+        raise GenerationError("Error downloading file", str(e))
 
 
 @main_bp.route('/set_theme', methods=['POST'])
@@ -215,7 +205,7 @@ def health():
     """Health check endpoint for container monitoring"""
     from datetime import datetime
     import subprocess
-    from flask import current_app as app
+    from flask import current_app as app, jsonify
     
     # Clean up expired tokens on health checks
     cleanup_expired_tokens()
@@ -243,13 +233,13 @@ def health():
                 # Usually the first line contains version info
                 first_line = output.splitlines()[0] if output.splitlines() else "Unknown"
                 ghostscript_version = first_line.strip()
-                logger.debug(f"Ghostscript version: {ghostscript_version}")
+                current_app.logger.debug(f"Ghostscript version: {ghostscript_version}")
         else:
-            logger.warning(f"Ghostscript check failed with return code {process.returncode}")
+            current_app.logger.warning(f"Ghostscript check failed with return code {process.returncode}")
             if process.stderr:
-                logger.warning(f"Error output: {process.stderr}")
+                current_app.logger.warning(f"Error output: {process.stderr}")
     except (subprocess.SubprocessError, OSError) as e:
-        logger.warning(f"Ghostscript health check failed: {str(e)}")
+        current_app.logger.warning(f"Ghostscript health check failed: {str(e)}")
     
     return jsonify({
         'status': 'healthy' if ghostscript_available else 'degraded',

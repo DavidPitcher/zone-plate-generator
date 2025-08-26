@@ -6,16 +6,31 @@
 %***********************************************************************
 % Import Arguments File and Run if it exists, otherwise use defaults
 %***********************************************************************
-ARGFILE (r) file
-{
-    %pop pop pop pop
-    closefile
-    ARGFILE run
-    (GS -  Successfully loaded arguments from ARGFILE) =
-} stopped {
-    stack
-    %clear
-    (GS - Failed to load arguments from ARGFILE, loading defaults) =
+/ARGFILE where {
+    pop
+    {
+        ARGFILE (r) file
+        closefile
+        ARGFILE run
+        (GS - Successfully loaded arguments from ARGFILE) =
+    } stopped {
+        % Error occurred - file doesn't exist or can't be read
+        /errName $error /errorname get 50 string cvs def
+        /errCmd $error /command get 50 string cvs def
+        clear
+        (GS - ARGFILE defined but file cannot be read: ) print
+        ARGFILE print
+        () =
+        (GS - Error Name: ) print
+        errName print
+        ( :: Error Command: ) print
+        errCmd print
+        () =
+        (GS - Exiting due to ARGFILE error) =
+        argfile_error
+    } if
+} {
+    (GS - Arguments file not specified, loading defaults) =
 
     %***********************************************************************
     % DEFAULT ARGUMENTS:
@@ -54,7 +69,8 @@ ARGFILE (r) file
     /DUP_FOCAL 180 def
 
     /NEGATIVE_MODE false def
-} if
+} ifelse 
+
 %***********************************************************************
 
 
@@ -792,5 +808,6 @@ gsave
 
 % Execute drawing based on TYPE
 executeDrawing
+showpage
 
 
