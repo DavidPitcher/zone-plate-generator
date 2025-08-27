@@ -1,15 +1,15 @@
 """Main routes for the zone plate generator application."""
 
-import logging
 from flask import Blueprint, render_template, request, redirect, url_for, send_file, current_app
 
 from .errors import ValidationError, GenerationError, FileNotFoundError, AccessDeniedError
+from ..utils.logging_utils import get_logger, Component, log_exception
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
 
-# Initialize logger at module level
-logger = logging.getLogger(__name__)
+# Initialize logger with component type
+logger = get_logger(__name__, Component.CONTROLLER)
 
 @main_bp.before_request
 def cleanup_expired_tokens_middleware():
@@ -71,6 +71,11 @@ def generate():
             raise ValidationError("Invalid input parameters provided", errors)
         
         # Generate image
+        logger.info_with_code(
+            "Generating zone plate image",
+            extra={'params': {k: v for k, v in params.items() if k not in ('negative_mode')}}
+        )
+        
         output_file = generator.generate_image(params)
         if output_file:
             from pathlib import Path
@@ -92,15 +97,34 @@ def generate():
             }
             session.modified = True
             
+            logger.info_with_code(
+                "Zone plate generated successfully",
+                extra={
+                    'filename': filename,
+                    'token': token[:8] + '...',  # Log only part of the token for security
+                    'expiration': expiration
+                }
+            )
+            
             return redirect(url_for('main.download', token=token))
         else:
+            logger.error_with_code(
+                "Failed to generate zone plate image", 
+                message_code="GENERATION_FAILED",
+                params_summary=str(params.get('type')) + " " + str(params.get('output_format'))
+            )
             raise GenerationError("Failed to generate zone plate. Please check your parameters.")
             
     except ValidationError:
         # Re-raise validation errors to be handled by error handler
         raise
     except Exception as e:
-        current_app.logger.error(f"Error in generate route: {str(e)}")
+        log_exception(
+            logger, 
+            message_code="GENERATION_FAILED", 
+            reason=str(e),
+            params_summary=str(params.get('type', 'unknown')) if 'params' in locals() else 'unknown'
+        )
         raise GenerationError(f"An unexpected error occurred: {str(e)}")
 
 
@@ -116,12 +140,21 @@ def download(token):
         
         # Check if token exists and is not expired
         if token not in valid_tokens:
-            current_app.logger.warning(f"Invalid download token attempted: {token}")
+            logger.warning_with_code(
+                "Invalid download token attempted", 
+                message_code="INVALID_TOKEN",
+                token=token[:8] + '...' if len(token) > 8 else token  # Partial token for security
+            )
             raise AccessDeniedError("Invalid download token", "The download link is invalid or has been used")
             
         # Check if token is expired    
         if time.time() > valid_tokens[token]['expires']:
-            current_app.logger.warning(f"Expired download token attempted: {token}")
+            logger.warning_with_code(
+                "Expired download token attempted", 
+                message_code="TOKEN_EXPIRED",
+                token=token[:8] + '...' if len(token) > 8 else token,  # Partial token for security
+                expiry_time=valid_tokens[token]['expires']
+            )
             # Remove expired token
             valid_tokens.pop(token, None)
             session.modified = True
@@ -135,7 +168,12 @@ def download(token):
         file_path = app.config['OUTPUT_DIR'] / filename
         
         if not file_path.exists():
-            current_app.logger.error(f"File not found for download: {file_path}")
+            logger.error_with_code(
+                "File not found for download", 
+                message_code="FILE_NOT_FOUND",
+                filename=filename,
+                file_path=str(file_path)
+            )
             raise FileNotFoundError("File not found", filename)
         
         # Set up a callback to delete the file after the response is sent
@@ -146,9 +184,22 @@ def download(token):
                 generator = app.zone_plate_generator
                 success = generator.delete_file(filename)
                 if not success:
-                    current_app.logger.warning(f"Failed to delete file after download: {filename}")
+                    logger.warning_with_code(
+                        "Failed to delete file after download", 
+                        message_code="FILE_DELETE_FAILED",
+                        filename=filename
+                    )
+                else:
+                    logger.info_with_code(
+                        "File deleted after download",
+                        extra={'filename': filename}
+                    )
             except Exception as e:
-                current_app.logger.error(f"Error deleting file after download: {str(e)}")
+                log_exception(
+                    logger, 
+                    message_code="CTRL_FILE_DELETE_FAILED",
+                    filename=filename
+                )
             return response
             
         return send_file(
@@ -160,7 +211,12 @@ def download(token):
         # Re-raise custom errors to be handled by error handlers
         raise
     except Exception as e:
-        current_app.logger.error(f"Error downloading file: {str(e)}")
+        log_exception(
+            logger, 
+            message_code="CTRL_UNHANDLED_ERROR",
+            context="download_route", 
+            token=token[:8] + '...' if 'token' in locals() and len(token) > 8 else 'unknown'
+        )
         raise GenerationError("Error downloading file", str(e))
 
 
@@ -233,13 +289,25 @@ def health():
                 # Usually the first line contains version info
                 first_line = output.splitlines()[0] if output.splitlines() else "Unknown"
                 ghostscript_version = first_line.strip()
-                current_app.logger.debug(f"Ghostscript version: {ghostscript_version}")
+                logger.debug_with_code(
+                    "Ghostscript version detected",
+                    extra={'version': ghostscript_version}
+                )
         else:
-            current_app.logger.warning(f"Ghostscript check failed with return code {process.returncode}")
-            if process.stderr:
-                current_app.logger.warning(f"Error output: {process.stderr}")
+            logger.warning_with_code(
+                "Ghostscript check failed", 
+                message_code="RESOURCE_UNAVAILABLE",
+                resource="ghostscript",
+                return_code=process.returncode,
+                stderr=process.stderr[:100] if process.stderr else "None"  # Limit stderr log
+            )
     except (subprocess.SubprocessError, OSError) as e:
-        current_app.logger.warning(f"Ghostscript health check failed: {str(e)}")
+        logger.warning_with_code(
+            "Ghostscript health check failed", 
+            message_code="RESOURCE_UNAVAILABLE",
+            resource="ghostscript",
+            reason=str(e)
+        )
     
     return jsonify({
         'status': 'healthy' if ghostscript_available else 'degraded',

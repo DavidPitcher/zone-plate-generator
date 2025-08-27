@@ -3,6 +3,11 @@
 import os
 from pathlib import Path
 
+from ..utils.logging_utils import get_logger, Component
+
+
+# Initialize module logger
+logger = get_logger(__name__, Component.CONFIG)
 
 class Config:
     """Base configuration class."""
@@ -152,7 +157,21 @@ class Config:
     @classmethod
     def init_app(cls):
         """Initialize the application environment."""
-        cls.OUTPUT_DIR.mkdir(exist_ok=True)
+        try:
+            cls.OUTPUT_DIR.mkdir(exist_ok=True)
+            logger.info_with_code(
+                message_code="INIT_OUTPUT_DIR_SUCCESS",
+                extra={'output_dir': str(cls.OUTPUT_DIR)}
+            )
+        except Exception as e:
+            logger.error_with_code(
+                message_code="INIT_OUTPUT_DIR_FAILED",
+                extra={
+                    'dir_path': str(cls.OUTPUT_DIR),
+                    'error': str(e)
+                }
+            )
+            raise
 
 class LocalConfig(Config):
     """Local configuration."""
@@ -178,4 +197,8 @@ class ProdConfig(Config):
         """Initialize the application environment."""
         super().init_app()
         # Additional production setup can go here
-        # For example, configuring logging
+        logger.info_with_code(
+            "Production environment initialized",
+            message_code="INIT_SUCCESS",
+            extra={'env': cls.FLASK_ENV}
+        )

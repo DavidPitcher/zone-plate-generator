@@ -1,12 +1,16 @@
 """Zone Plate Generator application package."""
 
 import os
-import logging
 from flask import Flask
 
 from .config import LocalConfig, DevConfig, ProdConfig
 from .models import ZonePlateGenerator
 from .controllers import main_bp, register_error_handlers
+from .utils.logging_utils import configure_logging, get_logger, Component
+
+# Configure application-level logger
+configure_logging(app_name="zone_plate_ui")
+logger = get_logger(__name__, Component.SYSTEM)
 
 def create_app(config_class=None):
     """Application factory function.
@@ -37,16 +41,19 @@ def create_app(config_class=None):
     # Load configuration
     app.config.from_object(config_class)
     
-    # Configure logging based on environment
-    log_level = logging.DEBUG if app.config.get('DEBUG', False) else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    app.logger.info(f"Starting Zone Plate Generator with {config_class.__name__}")
-    
     # Initialize configuration (create directories, etc.)
-    config_class.init_app()
+    try:
+        config_class.init_app()
+        logger.info_with_code(
+            message_code="CFG_INIT_SUCCESS",
+            extra={'config_class': config_class.__name__}
+        )
+    except Exception as e:
+        logger.error_with_code(
+            message_code="CFG_INIT_FAILED",
+            extra={'reason': str(e)}
+        )
+        raise
     
     # Initialize ZonePlateGenerator
     app.zone_plate_generator = ZonePlateGenerator(
@@ -54,8 +61,7 @@ def create_app(config_class=None):
         postscript_args_file=app.config['POSTSCRIPT_ARGS_FILE'],
         output_dir=app.config['OUTPUT_DIR'],
         valid_types=app.config['VALID_TYPES'],
-        valid_formats=app.config['VALID_OUTPUT_FORMATS'],
-        logger=app.logger 
+        valid_formats=app.config['VALID_OUTPUT_FORMATS']
     )
     
     # Register blueprint
