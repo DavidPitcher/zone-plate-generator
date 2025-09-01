@@ -2,31 +2,27 @@
 
 import os
 from pathlib import Path
+from typing import ClassVar, Optional
 
-from ..utils.logging_utils import get_logger, Component
-
-
-# Initialize module logger
-logger = get_logger(__name__, Component.CONFIG)
-
-class Config:
+class AppConfig:
     """Base configuration class."""
 
     # Path Configuration
-    APP_DIR = Path(__file__).parent.parent
-    BASE_DIR = APP_DIR.parent.parent
-    OUTPUT_DIR = BASE_DIR / "output"
-    POSTSCRIPT_DIR = APP_DIR.parent / "postscript"
-    POSTSCRIPT_FILE = POSTSCRIPT_DIR / "zone_plate_gen.ps"
-    POSTSCRIPT_ARGS_FILE = POSTSCRIPT_DIR / "zone_plate_args.ps"
+    APP_DIR: ClassVar[Path] = Path(__file__).parent.parent
+    BASE_DIR: ClassVar[Path] = APP_DIR.parent.parent
+    OUTPUT_DIR: ClassVar[Path] = BASE_DIR / "output"
+    POSTSCRIPT_DIR: ClassVar[Path] = APP_DIR.parent / "postscript"
+    POSTSCRIPT_FILE: ClassVar[Path] = POSTSCRIPT_DIR / "zone_plate_gen.ps"
+    POSTSCRIPT_ARGS_FILE: ClassVar[Path] = POSTSCRIPT_DIR / "zone_plate_args.ps"
+    
+    # Environment Configuration - define as class variables but don't populate yet
+    FLASK_ENV: ClassVar[Optional[str]] = None
+    PORT: ClassVar[Optional[int]] = None
+    GS_TIMEOUT: ClassVar[Optional[int]] = None
+    MAX_ZONES: ClassVar[Optional[int]] = None
+    MAX_CONTENT_LENGTH: ClassVar[Optional[int]] = None
+    SECRET_KEY: ClassVar[Optional[str]] = None
 
-    # Environment Configuration
-    FLASK_ENV = os.environ.get('FLASK_ENV', 'local')
-    PORT = int(os.environ.get('PORT', 8000))
-    GS_TIMEOUT = int(os.environ.get('GS_TIMEOUT', 120))
-    MAX_ZONES = int(os.environ.get('MAX_ZONES', 50))
-    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))   # 16MB max file size
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-unsafe-for-production')
 
     # Zone Plate Default Parameters
     DEFAULT_PARAMS = {
@@ -153,52 +149,58 @@ class Config:
         }
     }
 
+    @classmethod
+    def load_env_config(cls) -> None:
+        """Load environment-specific configuration variables.
+        
+        This method is called during app initialization, not during module import.
+        """
+        cls.FLASK_ENV = os.environ.get('FLASK_ENV', 'local')
+        cls.PORT = int(os.environ.get('PORT', 8000))
+        cls.GS_TIMEOUT = int(os.environ.get('GS_TIMEOUT', 120))
+        cls.MAX_ZONES = int(os.environ.get('MAX_ZONES', 50))
+        cls.MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB max file size
+        cls.SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-unsafe-for-production')
+
     # Ensure directories exist
     @classmethod
     def init_app(cls):
         """Initialize the application environment."""
         try:
             cls.OUTPUT_DIR.mkdir(exist_ok=True)
-            logger.info_with_code(
-                message_code="INIT_OUTPUT_DIR_SUCCESS",
-                extra={'output_dir': str(cls.OUTPUT_DIR)}
-            )
         except Exception as e:
-            logger.error_with_code(
-                message_code="INIT_OUTPUT_DIR_FAILED",
-                extra={
-                    'dir_path': str(cls.OUTPUT_DIR),
-                    'error': str(e)
-                }
-            )
             raise
 
-class LocalConfig(Config):
+class LocalConfig(AppConfig):
     """Local configuration."""
     
     DEBUG = True
-    TESTING = True
+    LOG_BACKTRACE = True
+    LOG_SERIALIZE = False
+    LOG_QUEUE = True
+    LOG_LEVEL = 'DEBUG'
 
-class DevConfig(Config):
+class DevConfig(AppConfig):
     """Development configuration."""
     
     DEBUG = True
-    TESTING = False
+    LOG_BACKTRACE = True
+    LOG_SERIALIZE = True
+    LOG_QUEUE = True
+    LOG_LEVEL = 'INFO'
 
-
-class ProdConfig(Config):
+class ProdConfig(AppConfig):
     """Production configuration."""
     
     DEBUG = False
-    TESTING = False
+    LOG_BACKTRACE = False
+    LOG_SERIALIZE = True
+    LOG_QUEUE = True
+    LOG_LEVEL = 'WARN'
 
     @classmethod
     def init_app(cls):
         """Initialize the application environment."""
         super().init_app()
-        # Additional production setup can go here
-        logger.info_with_code(
-            "Production environment initialized",
-            message_code="INIT_SUCCESS",
-            extra={'env': cls.FLASK_ENV}
-        )
+
+

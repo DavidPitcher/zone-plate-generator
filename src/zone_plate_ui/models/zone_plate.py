@@ -4,14 +4,10 @@ import os
 import io
 import uuid
 import subprocess
-import tempfile
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, TextIO, Tuple
-
-from ..utils.logging_utils import get_logger, Component, log_exception
-
+from typing import Dict, Any, Optional
 
 class ZonePlateGenerator:
     """Handles zone plate generation using Ghostscript"""
@@ -32,7 +28,6 @@ class ZonePlateGenerator:
         self.output_dir = output_dir
         self.valid_types = valid_types
         self.valid_formats = valid_formats
-        self.logger = logger if logger is not None else get_logger(__name__, Component.MODEL)
         
     def create_temp_args_file(self, params: Dict[str, Any], session_id: str = None) -> Path:
         """Create a temporary zone_plate_args.ps file from the template using the provided parameters.
@@ -68,11 +63,7 @@ class ZonePlateGenerator:
         # Write the processed content to the temporary file
         with open(temp_file, 'w') as output_file:
             output_file.write(template_content)
-        
-        self.logger.info_with_code(
-            "Created temporary args file", 
-            extra={'file_path': str(temp_file)}
-        )
+
         return temp_file
         
     def validate_parameters(self, params: Dict[str, Any]) -> Dict[str, str]:
@@ -135,25 +126,11 @@ class ZonePlateGenerator:
             file_path = self.output_dir / filename
             if file_path.exists():
                 os.unlink(file_path)
-                self.logger.info_with_code(
-                    "File deleted successfully", 
-                    extra={'file_path': str(file_path)}
-                )
                 return True
             else:
-                self.logger.warning_with_code(
-                    "File not found for deletion", 
-                    message_code="FILE_NOT_FOUND",
-                    file_path=str(file_path)
-                )
                 return False
         except Exception as e:
-            log_exception(
-                self.logger, 
-                message_code="MOD_FILE_DELETE_FAILED", 
-                file_path=str(file_path)
-            )
-            return False
+            raise 
             
     def generate_image(self, params: Dict[str, Any], session_id: str = None) -> Optional[str]:
         """Generate zone plate image and return the output file path
@@ -167,11 +144,6 @@ class ZonePlateGenerator:
         """
         errors = self.validate_parameters(params)
         if errors:
-            self.logger.error_with_code(
-                "Parameter validation failed", 
-                message_code="VALIDATION_FAILED",
-                errors=errors
-            )
             return None
             
         temp_args_file = None
@@ -220,24 +192,12 @@ class ZonePlateGenerator:
                 "-f",
                 f"{self.postscript_file}"
             ]
-                    
-            self.logger.info_with_code(
-                "Running Ghostscript command", 
-                extra={
-                    'command': 'gs',
-                    'device': device,
-                    'resolution': output_resolution,
-                    'output_file': str(output_file)
-                }
-            )
              
             # Create default streams
             _stdout = io.StringIO()
             _stderr = io.StringIO()
                 
             try:
-                self.logger.info_with_code("Starting Ghostscript execution")
-                
                 # Run Ghostscript using subprocess
                 process = subprocess.run(
                     gs_args,
@@ -257,16 +217,6 @@ class ZonePlateGenerator:
                 stderr_content = _stderr.getvalue()
                 
                 # Log output for debugging (regardless of success/failure)
-                if stdout_content.strip():
-                    self.logger.debug_with_code(
-                        "Ghostscript stdout", 
-                        extra={'stdout': stdout_content[:200] + ('...' if len(stdout_content) > 200 else '')}
-                    )
-                if stderr_content.strip():
-                    self.logger.debug_with_code(
-                        "Ghostscript stderr", 
-                        extra={'stderr': stderr_content[:200] + ('...' if len(stderr_content) > 200 else '')}
-                    )
                 
                 if process.returncode != 0:
                     self.logger.error_with_code(
@@ -276,73 +226,26 @@ class ZonePlateGenerator:
                         error=stderr_content[:200] if stderr_content else "No error details"
                     )
                     return None
-                
-                self.logger.info_with_code(
-                    "Ghostscript execution completed successfully", 
-                    extra={'exit_code': process.returncode}
-                )
-            
+                            
                 if not output_file.exists():
-                    self.logger.error_with_code(
-                        "Output file was not created", 
-                        message_code="OUTPUT_MISSING",
-                        file_path=str(output_file)
-                    )
                     return None
                 
                 file_size = output_file.stat().st_size
                 if file_size == 0:
-                    self.logger.error_with_code(
-                        "Output file is empty", 
-                        message_code="FILE_EMPTY",
-                        file_path=str(output_file)
-                    )
                     return None
                     
-                self.logger.info_with_code(
-                    "Successfully generated zone plate image", 
-                    extra={
-                        'file_path': str(output_file),
-                        'file_size': file_size,
-                        'format': params.get('output_format', 'unknown')
-                    }
-                )
                 return str(output_file)
                 
             except subprocess.SubprocessError as e:
-                log_exception(
-                    self.logger, 
-                    message_code="MOD_SUBPROCESS_FAILED",
-                    command="gs"
-                )
                 return None
             except FileNotFoundError as e:
-                self.logger.error_with_code(
-                    "Ghostscript executable not found", 
-                    message_code="GHOSTSCRIPT_MISSING"
-                )
                 return None
         except Exception as e:
-            log_exception(
-                self.logger, 
-                message_code="MOD_FILE_CREATION_FAILED",
-                reason=str(e)
-            )
             return None
         finally:
             #Clean up the temporary file
             if temp_args_file and temp_args_file.exists():
                 try:
                     os.unlink(temp_args_file)
-                    self.logger.info_with_code(
-                        "Deleted temporary args file", 
-                        extra={'file_path': str(temp_args_file)}
-                    )
                 except Exception as e:
-                    log_exception(
-                        self.logger, 
-                        message_code="MOD_CLEANUP_FAILED",
-                        file_path=str(temp_args_file)
-                    )
-            else:
-                self.logger.debug_with_code("No temporary args file to clean up")
+                    pass

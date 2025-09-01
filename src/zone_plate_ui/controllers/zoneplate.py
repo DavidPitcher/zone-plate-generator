@@ -1,23 +1,20 @@
 """Main routes for the zone plate generator application."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, send_file
 
-from .errors import ValidationError, GenerationError, FileNotFoundError, AccessDeniedError
-from ..utils.logging_utils import get_logger, Component, log_exception
+from zone_plate_ui.controllers.errors import ValidationError, GenerationError, FileNotFoundError, AccessDeniedError
 
 # Create blueprint
-main_bp = Blueprint('main', __name__)
+zoneplate_bp = Blueprint('zoneplate', __name__)
 
-# Initialize logger with component type
-logger = get_logger(__name__, Component.CONTROLLER)
 
-@main_bp.before_request
+@zoneplate_bp.before_request
 def cleanup_expired_tokens_middleware():
     """Clean up expired download tokens before each request"""
     cleanup_expired_tokens()
 
 
-@main_bp.route('/')
+@zoneplate_bp.route('/')
 def index():
     """Main page with zone plate generator form"""
     from flask import current_app as app
@@ -34,7 +31,7 @@ def index():
                           tooltips=app.config['TOOLTIPS'])
 
 
-@main_bp.route('/generate', methods=['POST'])
+@zoneplate_bp.route('/generate', methods=['POST'])
 def generate():
     """Generate zone plate based on form parameters"""
     from flask import current_app as app
@@ -70,12 +67,6 @@ def generate():
             # Raise validation error to be handled by error handler
             raise ValidationError("Invalid input parameters provided", errors)
         
-        # Generate image
-        logger.info_with_code(
-            "Generating zone plate image",
-            extra={'params': {k: v for k, v in params.items() if k not in ('negative_mode')}}
-        )
-        
         output_file = generator.generate_image(params)
         if output_file:
             from pathlib import Path
@@ -96,39 +87,19 @@ def generate():
                 'expires': expiration
             }
             session.modified = True
-            
-            logger.info_with_code(
-                "Zone plate generated successfully",
-                extra={
-                    'filename': filename,
-                    'token': token[:8] + '...',  # Log only part of the token for security
-                    'expiration': expiration
-                }
-            )
-            
-            return redirect(url_for('main.download', token=token))
+                
+            return redirect(url_for('zoneplate.download', token=token))
         else:
-            logger.error_with_code(
-                "Failed to generate zone plate image", 
-                message_code="GENERATION_FAILED",
-                params_summary=str(params.get('type')) + " " + str(params.get('output_format'))
-            )
             raise GenerationError("Failed to generate zone plate. Please check your parameters.")
             
     except ValidationError:
         # Re-raise validation errors to be handled by error handler
         raise
     except Exception as e:
-        log_exception(
-            logger, 
-            message_code="GENERATION_FAILED", 
-            reason=str(e),
-            params_summary=str(params.get('type', 'unknown')) if 'params' in locals() else 'unknown'
-        )
         raise GenerationError(f"An unexpected error occurred: {str(e)}")
 
 
-@main_bp.route('/download/<token>')
+@zoneplate_bp.route('/download/<token>')
 def download(token):
     """Download generated zone plate file and delete it afterwards"""
     try:
@@ -140,21 +111,10 @@ def download(token):
         
         # Check if token exists and is not expired
         if token not in valid_tokens:
-            logger.warning_with_code(
-                "Invalid download token attempted", 
-                message_code="INVALID_TOKEN",
-                token=token[:8] + '...' if len(token) > 8 else token  # Partial token for security
-            )
             raise AccessDeniedError("Invalid download token", "The download link is invalid or has been used")
             
         # Check if token is expired    
         if time.time() > valid_tokens[token]['expires']:
-            logger.warning_with_code(
-                "Expired download token attempted", 
-                message_code="TOKEN_EXPIRED",
-                token=token[:8] + '...' if len(token) > 8 else token,  # Partial token for security
-                expiry_time=valid_tokens[token]['expires']
-            )
             # Remove expired token
             valid_tokens.pop(token, None)
             session.modified = True
@@ -168,12 +128,6 @@ def download(token):
         file_path = app.config['OUTPUT_DIR'] / filename
         
         if not file_path.exists():
-            logger.error_with_code(
-                "File not found for download", 
-                message_code="FILE_NOT_FOUND",
-                filename=filename,
-                file_path=str(file_path)
-            )
             raise FileNotFoundError("File not found", filename)
         
         # Set up a callback to delete the file after the response is sent
@@ -183,23 +137,9 @@ def download(token):
                 # Use the generator's delete_file method to delete the file
                 generator = app.zone_plate_generator
                 success = generator.delete_file(filename)
-                if not success:
-                    logger.warning_with_code(
-                        "Failed to delete file after download", 
-                        message_code="FILE_DELETE_FAILED",
-                        filename=filename
-                    )
-                else:
-                    logger.info_with_code(
-                        "File deleted after download",
-                        extra={'filename': filename}
-                    )
             except Exception as e:
-                log_exception(
-                    logger, 
-                    message_code="CTRL_FILE_DELETE_FAILED",
-                    filename=filename
-                )
+                raise GenerationError("Error deleting file after download", str(e))
+            
             return response
             
         return send_file(
@@ -210,17 +150,12 @@ def download(token):
     except (AccessDeniedError, FileNotFoundError):
         # Re-raise custom errors to be handled by error handlers
         raise
+
     except Exception as e:
-        log_exception(
-            logger, 
-            message_code="CTRL_UNHANDLED_ERROR",
-            context="download_route", 
-            token=token[:8] + '...' if 'token' in locals() and len(token) > 8 else 'unknown'
-        )
         raise GenerationError("Error downloading file", str(e))
 
 
-@main_bp.route('/set_theme', methods=['POST'])
+@zoneplate_bp.route('/set_theme', methods=['POST'])
 def set_theme():
     """Set user's theme preference"""
     from flask import current_app as app
@@ -233,7 +168,7 @@ def set_theme():
             theme = 'light'
         
         # For form submissions, redirect back to the referring page
-        response = redirect(request.referrer or url_for('main.index'))
+        response = redirect(request.referrer or url_for('zoneplate.index'))
         response.set_cookie('theme', theme, max_age=365*24*60*60)  # 1 year
         return response
 
@@ -256,7 +191,7 @@ def cleanup_expired_tokens():
             session.modified = True
 
 
-@main_bp.route('/health')
+@zoneplate_bp.route('/health')
 def health():
     """Health check endpoint for container monitoring"""
     from datetime import datetime
@@ -289,25 +224,12 @@ def health():
                 # Usually the first line contains version info
                 first_line = output.splitlines()[0] if output.splitlines() else "Unknown"
                 ghostscript_version = first_line.strip()
-                logger.debug_with_code(
-                    "Ghostscript version detected",
-                    extra={'version': ghostscript_version}
-                )
         else:
-            logger.warning_with_code(
-                "Ghostscript check failed", 
-                message_code="RESOURCE_UNAVAILABLE",
-                resource="ghostscript",
-                return_code=process.returncode,
-                stderr=process.stderr[:100] if process.stderr else "None"  # Limit stderr log
-            )
+            # Log the failure
+            raise Exception(f"Ghostscript returned non-zero exit code {process.returncode}")
+
     except (subprocess.SubprocessError, OSError) as e:
-        logger.warning_with_code(
-            "Ghostscript health check failed", 
-            message_code="RESOURCE_UNAVAILABLE",
-            resource="ghostscript",
-            reason=str(e)
-        )
+        raise
     
     return jsonify({
         'status': 'healthy' if ghostscript_available else 'degraded',

@@ -1,7 +1,7 @@
 """Controllers package for the zone plate generator application."""
 
-from .main import main_bp
-from .errors import (
+from zone_plate_ui.controllers.zoneplate import zoneplate_bp
+from zone_plate_ui.controllers.errors import (
     register_error_handlers,
     ValidationError,
     GenerationError,
@@ -10,7 +10,7 @@ from .errors import (
 )
 
 __all__ = [
-    'main_bp', 
+    'zoneplate_bp',
     'register_error_handlers',
     'ValidationError',
     'GenerationError', 
