@@ -21,6 +21,8 @@ class log():
     CFG_APP_CONFIG_SUCCESS = "CFG_APP_CONFIG_SUCCESS"
     CFG_APP_CONFIG_FAILURE = "CFG_APP_CONFIG_FAILURE"
 
+    WEB_GENERATE_POST_PARAMS = "WEB_GENERATE_POST_PARAMS"
+
     # Message code and templates mapping
     DEFINED_MESSAGES = {
         # Configuration messages (1000-1999)
@@ -39,6 +41,10 @@ class log():
         "CFG_APP_CONFIG_FAILURE": {
             "CODE": 1003,
             "MESSAGE": "Failed to process app configuration: {error}"
+        },
+        "WEB_GENERATE_POST_PARAMS": {
+            "CODE": 9000,
+            "MESSAGE": "Generate a request sent, zone plate parameters: {params}"
         }
     }
 
@@ -46,7 +52,7 @@ class log():
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<blue>{name}</blue>:<blue>{module}</blue>:<blue>{function}</blue>:<blue>{line}</blue> | "
-        "<level>{message}</level> | "
+        "<level>{message}</level> "
         "\n{exception}"
     )
 

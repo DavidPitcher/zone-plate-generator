@@ -1,24 +1,44 @@
-"""Main routes for the zone plate generator application."""
+import secrets
+import subprocess
+import time
+from datetime import datetime
+from pathlib import Path
 
-from flask import Blueprint, render_template, request, redirect, url_for, send_file
+from flask import (
+    Blueprint, 
+    after_this_request,
+    jsonify,
+    render_template, 
+    request, 
+    redirect, 
+    url_for, 
+    send_file, 
+    session, 
+    url_for, 
+    current_app as app
+)
 
-from zone_plate_ui.controllers.errors import ValidationError, GenerationError, FileNotFoundError, AccessDeniedError
+from zone_plate_ui.controllers.errors import (
+    ValidationError, 
+    GenerationError, 
+    FileNotFoundError, 
+    AccessDeniedError
+)
+
+from zone_plate_ui.utils import log
 
 # Create blueprint
 zoneplate_bp = Blueprint('zoneplate', __name__)
-
 
 @zoneplate_bp.before_request
 def cleanup_expired_tokens_middleware():
     """Clean up expired download tokens before each request"""
     cleanup_expired_tokens()
 
-
 @zoneplate_bp.route('/')
 def index():
     """Main page with zone plate generator form"""
-    from flask import current_app as app
-    
+
     theme = request.cookies.get('theme', 'light')
     return render_template('index.html', 
                           default_params=app.config['DEFAULT_PARAMS'],
@@ -34,7 +54,6 @@ def index():
 @zoneplate_bp.route('/generate', methods=['POST'])
 def generate():
     """Generate zone plate based on form parameters"""
-    from flask import current_app as app
     
     try:
         # Extract parameters from form
@@ -59,7 +78,7 @@ def generate():
                 params[key] = converter(form_value)
             else:
                 params[key] = default_value
-        
+        log.info(log.WEB_GENERATE_POST_PARAMS, params=params)
         generator = app.zone_plate_generator
         
         errors = generator.validate_parameters(params)
@@ -69,10 +88,6 @@ def generate():
         
         output_file = generator.generate_image(params)
         if output_file:
-            from pathlib import Path
-            import secrets
-            import time
-            from flask import session
             
             # Create a secure download token
             filename = Path(output_file).name
@@ -103,8 +118,6 @@ def generate():
 def download(token):
     """Download generated zone plate file and delete it afterwards"""
     try:
-        from flask import current_app as app, after_this_request, session
-        import time
         
         # Verify the download token from the session
         valid_tokens = session.get('download_tokens', {})
@@ -158,7 +171,6 @@ def download(token):
 @zoneplate_bp.route('/set_theme', methods=['POST'])
 def set_theme():
     """Set user's theme preference"""
-    from flask import current_app as app
     
     if request.method == 'POST':
         
@@ -175,8 +187,6 @@ def set_theme():
 
 def cleanup_expired_tokens():
     """Clean up expired download tokens from the session"""
-    from flask import session
-    import time
     
     if 'download_tokens' in session:
         # Find expired tokens
@@ -194,9 +204,6 @@ def cleanup_expired_tokens():
 @zoneplate_bp.route('/health')
 def health():
     """Health check endpoint for container monitoring"""
-    from datetime import datetime
-    import subprocess
-    from flask import current_app as app, jsonify
     
     # Clean up expired tokens on health checks
     cleanup_expired_tokens()

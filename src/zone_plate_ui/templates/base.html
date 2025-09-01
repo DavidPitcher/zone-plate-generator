@@ -29,7 +29,7 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+            <a class="navbar-brand" href="{{ url_for('zoneplate.index') }}">
                 <span class="icon-dot"></span>
                 Zone Plate Generator
             </a>
@@ -53,7 +53,7 @@
                         </span>
                     </label>
                     <div class="theme-palette">
-                        <form method="post" action="{{ url_for('main.set_theme') }}" class="theme-palette-form">
+                        <form method="post" action="{{ url_for('zoneplate.set_theme') }}" class="theme-palette-form">
                             {% for theme_key, theme_data in themes.items() %}
                             <button type="submit"
                                 name="theme"
