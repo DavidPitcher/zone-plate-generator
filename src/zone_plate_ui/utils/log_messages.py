@@ -22,6 +22,13 @@ class log():
     CFG_APP_CONFIG_FAILURE = "CFG_APP_CONFIG_FAILURE"
 
     WEB_GENERATE_POST_PARAMS = "WEB_GENERATE_POST_PARAMS"
+    MDL_ZONEPLATEGEN_INIT = "MDL_ZONEPLATEGEN_INIT"
+    MDL_ZONEPLATEGEN_ARGSFILE = "MDL_ZONEPLATEGEN_ARGSFILE"
+    MDL_ZONEPLATEGEN_ARGSFILE_FAILED = "MDL_ZONEPLATEGEN_ARGSFILE_FAILED"
+    MDL_ZONEPLATEGEN_DELETEFILE = "MDL_ZONEPLATEGEN_DELETEFILE"
+    MDL_ZONEPLATEGEN_GSPROCESS_FAILED = "MDL_ZONEPLATEGEN_GSPROCESS_FAILED"
+    MDL_ZONEPLATEGEN_GSPROCESS_SUCCESS = "MDL_ZONEPLATEGEN_GSPROCESS_SUCCESS"
+    MDL_ZONEPLATEGEN_OUTPUT_FAILED = "MDL_ZONEPLATEGEN_OUTPUT_FAILED"
 
     # Message code and templates mapping
     DEFINED_MESSAGES = {
@@ -44,7 +51,35 @@ class log():
         },
         "WEB_GENERATE_POST_PARAMS": {
             "CODE": 9000,
-            "MESSAGE": "Generate a request sent, zone plate parameters: {params}"
+            "MESSAGE": "Generate a zone platerequest sent, zone plate parameters: {params}"
+        },
+        "MDL_ZONEPLATEGEN_INIT": {
+            "CODE": 8000,
+            "MESSAGE": "ZonePlateGenerator initialized"
+        },
+        "MDL_ZONEPLATEGEN_ARGSFILE": {
+            "CODE": 8001,
+            "MESSAGE": "ZonePlateGenerator custom zone plate arguments file created, zone plate parameters: {params}"
+        },
+        "MDL_ZONEPLATEGEN_ARGSFILE_FAILED": {
+            "CODE": 8006,
+            "MESSAGE": "Failed to create zone plate arguments file: {error}, session_id: {session_id}"
+        },
+        "MDL_ZONEPLATEGEN_DELETEFILE": {
+            "CODE": 8002,
+            "MESSAGE": "ZonePlateGenerator deleted file: {deleted_file}"
+        },
+        "MDL_ZONEPLATEGEN_GSPROCESS_FAILED": {
+            "CODE": 8003,
+            "MESSAGE": "Ghostscript process failed with exit code: {exit_code}, error: {error}"
+        },
+        "MDL_ZONEPLATEGEN_GSPROCESS_SUCCESS": {
+            "CODE": 8004,
+            "MESSAGE": "Ghostscript process completed successfully, stdout: {stdout}"
+        },
+        "MDL_ZONEPLATEGEN_OUTPUT_FAILED": {
+            "CODE": 8005,
+            "MESSAGE": "Zone plate output generation failed, no output file: {output_file}"
         }
     }
 
@@ -159,7 +194,7 @@ class log():
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).debug(message)
+        logger.opt(depth=1).bind(**extra_kwargs).debug(message)
     
     @staticmethod
     def info(message_key: str, **kwargs) -> None:
@@ -188,7 +223,7 @@ class log():
         # Add message code to the extra context
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).info(message)
+        logger.opt(depth=1).bind(**extra_kwargs).info(message)
     
     @staticmethod
     def warning(message_key: str, **kwargs) -> None:
@@ -218,8 +253,8 @@ class log():
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).warning(message)
-    
+        logger.opt(depth=1).bind(**extra_kwargs).warning(message)
+
     @staticmethod
     def error(message_key: str, **kwargs) -> None:
         """
@@ -248,8 +283,8 @@ class log():
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).error(message)
-    
+        logger.opt(depth=1).bind(**extra_kwargs).error(message)
+
     @staticmethod
     def critical(message_key: str, **kwargs) -> None:
         """
@@ -278,8 +313,8 @@ class log():
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).critical(message)
-    
+        logger.opt(depth=1).bind(**extra_kwargs).critical(message)
+
     @staticmethod
     def exception(message_key: str, exc_info: bool = True, **kwargs) -> None:
         """
@@ -309,4 +344,4 @@ class log():
         extra_kwargs = log._add_message_code(message_key, extra_kwargs)
         
         # Pass the extra context to loguru
-        logger.bind(**extra_kwargs).exception(message)
+        logger.opt(depth=1).bind(**extra_kwargs).exception(message)

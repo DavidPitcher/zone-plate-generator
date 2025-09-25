@@ -2,7 +2,7 @@
 
 from zone_plate_ui.controllers.zoneplate import zoneplate_bp
 from zone_plate_ui.controllers.errors import (
-    register_error_handlers,
+    HttpErrorManager,
     ValidationError,
     GenerationError,
     FileNotFoundError,
@@ -11,7 +11,7 @@ from zone_plate_ui.controllers.errors import (
 
 __all__ = [
     'zoneplate_bp',
-    'register_error_handlers',
+    'HttpErrorManager',
     'ValidationError',
     'GenerationError', 
     'FileNotFoundError',

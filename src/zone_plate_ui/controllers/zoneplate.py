@@ -79,8 +79,8 @@ def generate():
             else:
                 params[key] = default_value
         log.info(log.WEB_GENERATE_POST_PARAMS, params=params)
-        generator = app.zone_plate_generator
         
+        generator = app.zone_plate_generator
         errors = generator.validate_parameters(params)
         if errors:
             # Raise validation error to be handled by error handler
@@ -97,6 +97,7 @@ def generate():
             expiration = time.time() + 300  # Current time + 5 minutes
             if 'download_tokens' not in session:
                 session['download_tokens'] = {}
+                
             session['download_tokens'][token] = {
                 'filename': filename,
                 'expires': expiration

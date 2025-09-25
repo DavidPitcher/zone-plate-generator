@@ -36,7 +36,7 @@
     % DEFAULT ARGUMENTS:
     %***********************************************************************
     % change number to whatever focal length in mm you want
-    /FOCAL 210 def              
+    /FOCAL 450 def              
 
     % number of opaque rings to generate
     /RINGS 7 def                
@@ -59,13 +59,13 @@
 
     % space between sieve holes in mm
     % the greater the magnification, the larger the number should be
-    /SIEVE_SPACE 0.04 def       
+    /SIEVE_SPACE 0.06 def       
 
     % type of zone plate to generate
     % valid values are GRID, PLATE, SIEVE, PHOTON
-    /TYPE (PLATE) def
+    /TYPE (GRID) def
 
-    % duplucating camera focal length used
+    % duplicating camera focal length used
     /DUP_FOCAL 180 def
 
     /NEGATIVE_MODE false def
@@ -81,6 +81,7 @@
 /pagewidth 305 def
 /pageheight 457 def 
 /border_mm 10 def
+/punch_stroke_width 0.5 def
 /available_width pagewidth border_mm 2 mul sub def
 /available_height pageheight border_mm 2 mul sub def 
 /zoneplate_diameter PUNCH_DIAMETER MAG mul PADDING add def
@@ -150,6 +151,18 @@ clippath
 gsave
 %************************************************************************
 
+
+%*****************************************************************
+% Draw Punch Outline Function
+%*****************************************************************
+/drawPunchOutline {
+    % Draw Punch Outline to cut zone plate from film
+    0 customgray                                  
+    punch_stroke_width mmToPoints setlinewidth                                                  
+    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
+    stroke
+} def
+%*****************************************************************
 
 %*****************************************************************
 % Calculate the Current Ring Radius
@@ -306,11 +319,8 @@ gsave
     % Translate current position to correct grid position
     colOffset rowOffset translate
     
-    % Draw Punch Outline to cut zone plate from film
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                  
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -345,11 +355,8 @@ gsave
     % Translate current position to correct grid position
     colOffset rowOffset translate
     
-    % Draw Punch Outline to cut zone plate from film
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -392,11 +399,8 @@ gsave
     % Translate current position to correct grid position
     colOffset rowOffset translate
     
-    % Draw Punch Outline to cut zone plate from film
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -626,11 +630,8 @@ gsave
     % Use existing drawZonePlate logic but without the translation
     % since we've already positioned at the center
     
-    % Draw Punch Outline
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                  
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -674,11 +675,8 @@ gsave
     % Draw zone sieve at the center
     % Use existing drawZoneSieve logic but without the translation
     
-    % Draw Punch Outline
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 360 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -732,11 +730,8 @@ gsave
     % Draw photon sieve at the center
     % Use existing drawPhotonSieve logic but without the translation
     
-    % Draw Punch Outline
-    0 customgray                                  
-    .5 mmToPoints setlinewidth                                                   
-    0 0 PUNCH_DIAMETER MAG mul 2 div mmToPoints 0 361 arc 
-    stroke
+    % Draw Punch Outline using the dedicated function
+    drawPunchOutline
     
     1 2 RINGS 2 mul {
         /n exch def
@@ -803,11 +798,12 @@ gsave
                 } ifelse
             } ifelse
         } ifelse
+        showpage
     } ifelse
 } def
 
 % Execute drawing based on TYPE
 executeDrawing
-showpage
+
 
 

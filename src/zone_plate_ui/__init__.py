@@ -5,7 +5,7 @@ from flask import Flask
 from zone_plate_ui.utils import log
 from zone_plate_ui.config import LocalConfig, DevConfig, ProdConfig, LogConfig
 from zone_plate_ui.models import ZonePlateGenerator
-from zone_plate_ui.controllers import zoneplate_bp, register_error_handlers
+from zone_plate_ui.controllers import zoneplate_bp, HttpErrorManager
 
 def create_app(config_class=None):
     """Application factory function.
@@ -19,6 +19,7 @@ def create_app(config_class=None):
     """
 
     app = Flask(__name__)
+    HttpErrorManager(app)
 
     # Determine configuration to use
     if config_class is None:
@@ -64,8 +65,5 @@ def create_app(config_class=None):
     
     # Register blueprint
     app.register_blueprint(zoneplate_bp)
-    
-    # Register error handlers
-    register_error_handlers(app)
     
     return app

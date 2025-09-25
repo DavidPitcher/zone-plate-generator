@@ -1,3 +1,4 @@
+import logging.handlers
 import sys
 import logging
 from loguru import logger
@@ -24,7 +25,7 @@ class LogConfig:
 
             # Add the Loguru handler to the root logger
             logging.basicConfig(handlers=[InterceptHandler()], level=0)
-
+           
             # Get log configuration attributes with safe defaults
             log_level = getattr(config, 'LOG_LEVEL', 'INFO')
             log_backtrace = getattr(config, 'LOG_BACKTRACE', False)
